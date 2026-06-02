@@ -1,0 +1,19 @@
+
+> genegenie-frontend@1.0.0 dev
+> next dev -H 0.0.0.0 --port 3000
+
+▲ Next.js 16.2.7 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://0.0.0.0:3000
+✓ Ready in 1252ms
+
+○ Compiling / ...
+ GET / 200 in 5.8s (next.js: 5.0s, application-code: 845ms)
+ GET / 200 in 310ms (next.js: 13ms, application-code: 297ms)
+ GET /platform 200 in 932ms (next.js: 797ms, application-code: 135ms)
+ GET /applications 200 in 993ms (next.js: 827ms, application-code: 166ms)
+ GET /portal 200 in 1038ms (next.js: 866ms, application-code: 172ms)
+ GET /portal 200 in 99ms (next.js: 10ms, application-code: 89ms)
+ GET / 200 in 159ms (next.js: 9ms, application-code: 150ms)
+ GET /platform 200 in 114ms (next.js: 10ms, application-code: 104ms)
+ GET / 200 in 170ms (next.js: 14ms, application-code: 156ms)
