@@ -1,4 +1,5 @@
 import { ArrowRight, Building2, Dna, FlaskConical, Microscope, ShieldCheck, Sparkles } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import SectionHeader from './components/SectionHeader';
 
@@ -47,20 +48,24 @@ export default function HomePage() {
               </Link>
             </div>
           </div>
-          <div className="rounded-lg border border-zinc-800 bg-zinc-950/70 p-4">
-            <div className="grid grid-cols-12 gap-1">
-              {Array.from({ length: 108 }).map((_, index) => (
-                <div
-                  key={index}
-                  className={`h-8 rounded-sm border ${
-                    index % 17 === 0
-                      ? 'border-cyan-300/40 bg-cyan-400/25'
-                      : index % 11 === 0
-                        ? 'border-emerald-300/30 bg-emerald-400/20'
-                        : 'border-zinc-800 bg-zinc-900/80'
-                  }`}
-                />
-              ))}
+          <div className="relative overflow-hidden rounded-lg border border-cyan-400/15 bg-black shadow-bio">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_42%_48%,rgba(34,211,238,0.18),transparent_34%),radial-gradient(circle_at_64%_45%,rgba(16,185,129,0.14),transparent_28%)]" />
+            <Image
+              src="/frontpage_logo.jpg"
+              alt="Protein structure visualization"
+              width={550}
+              height={363}
+              priority
+              className="relative z-10 h-full min-h-80 w-full object-contain p-4 brightness-110 contrast-125 saturate-125"
+            />
+            <div className="protein-spark protein-spark-a" />
+            <div className="protein-spark protein-spark-b" />
+            <div className="protein-spark protein-spark-c" />
+            <div className="protein-spark protein-spark-d" />
+            <div className="absolute inset-x-6 bottom-5 z-20 h-px bg-gradient-to-r from-transparent via-cyan-300/50 to-transparent" />
+            <div className="absolute inset-0 z-20 ring-1 ring-inset ring-white/5" />
+            <div className="absolute bottom-4 left-4 z-20 rounded-md border border-zinc-700/70 bg-zinc-950/70 px-3 py-2 text-xs text-cyan-100 backdrop-blur-md">
+              Structure model active
             </div>
           </div>
         </div>
