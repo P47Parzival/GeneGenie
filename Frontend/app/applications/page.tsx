@@ -1,20 +1,27 @@
 import { Leaf, Microscope, Sprout, TestTube2 } from 'lucide-react';
+import Image from 'next/image';
 
 const applications = [
   {
-    title: 'Therapeutics',
+    title: 'Antibodies',
     description: 'Editor and guide design workflows for translational programs that require precision, reviewability, and evidence capture.',
     icon: TestTube2,
+    image: '/antibodies.jpg',
+    imageAlt: 'Antibody structure visualization',
   },
   {
     title: 'Agriculture',
     description: 'Sequence design infrastructure for crop resilience, trait exploration, and scalable research collaboration.',
     icon: Sprout,
+    image: '/agriculture.png',
+    imageAlt: 'Agricultural biotechnology visualization',
   },
   {
     title: 'Research',
     description: 'A governed workspace for academic and industry teams exploring sequence-function relationships.',
     icon: Microscope,
+    image: '/research.png',
+    imageAlt: 'Research laboratory visualization',
   },
 ];
 
@@ -39,16 +46,18 @@ export default function ApplicationsPage() {
               <Icon className="h-7 w-7 text-cyan-300" />
               <h2 className="mt-6 text-2xl font-semibold text-white">{application.title}</h2>
               <p className="mt-4 text-sm leading-6 text-zinc-300">{application.description}</p>
-              <div className="mt-6 h-32 rounded-lg border border-zinc-800 bg-zinc-950/70 p-3">
-                <div className="grid h-full grid-cols-8 gap-1">
-                  {Array.from({ length: 32 }).map((_, index) => (
-                    <span
-                      key={index}
-                      className={`rounded-sm border ${
-                        index % 9 === 0 ? 'border-emerald-300/30 bg-emerald-400/20' : 'border-zinc-800 bg-zinc-900'
-                      }`}
-                    />
-                  ))}
+              <div className="relative mt-6 h-44 overflow-hidden rounded-lg border border-zinc-800 bg-black">
+                <Image
+                  src={application.image}
+                  alt={application.imageAlt}
+                  fill
+                  sizes="(min-width: 1024px) 33vw, 100vw"
+                  className="object-cover brightness-90 contrast-125 saturate-125 transition duration-500 hover:scale-[1.03]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent" />
+                <div className="absolute inset-0 ring-1 ring-inset ring-white/5" />
+                <div className="absolute bottom-3 left-3 rounded-md border border-cyan-400/20 bg-zinc-950/70 px-3 py-1.5 text-xs text-cyan-100 backdrop-blur-md">
+                  {application.title} workspace
                 </div>
               </div>
             </article>

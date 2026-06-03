@@ -1,23 +1,17 @@
-import { Binary, BrainCircuit, DatabaseZap, FlaskConical, GitBranch, ShieldCheck } from 'lucide-react';
+import { Binary, BrainCircuit, DatabaseZap, FlaskConical, GitBranch, ShieldCheck, Target } from 'lucide-react';
 import SectionHeader from '../components/SectionHeader';
 
-const capabilities = [
-  {
-    title: 'Foundation model design layer',
-    description: 'Model adapters are structured around target context, editor constraints, PAM requirements, and review metadata.',
-    icon: BrainCircuit,
-  },
-  {
-    title: 'Sequence intelligence graph',
-    description: 'Connect candidate sequences, annotations, assay plans, provenance, and review status without coupling the UI to mock data.',
-    icon: GitBranch,
-  },
-  {
-    title: 'Wet-lab feedback readiness',
-    description: 'Portal primitives are prepared for assay ingestion, batch states, confidence envelopes, and validation summaries.',
-    icon: FlaskConical,
-  },
+const inputs = [
+  { label: 'Raw Data', icon: DatabaseZap },
+  { label: 'Logical Rules', icon: Binary },
+  { label: 'Knowledge Base', icon: BrainCircuit },
+  { label: 'Agent Roles', icon: Target },
 ];
+
+const layers = ['Structured Knowledge Graph', 'Optimized Workflow', 'Actionable Insights', 'Agentic Loop'];
+
+const leftPills = ['Raw Data Ingestion', 'Task Orchestration', 'Real-time Analytics', 'Autonomous Actions'];
+const rightPills = ['Semantic Linking', 'Agent Collaboration', 'Predictive Models', 'API Integrations'];
 
 export default function PlatformPage() {
   return (
@@ -32,17 +26,66 @@ export default function PlatformPage() {
         </p>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-3">
-        {capabilities.map((capability) => {
-          const Icon = capability.icon;
-          return (
-            <article key={capability.title} className="rounded-lg border border-zinc-800 bg-zinc-900/45 p-5 backdrop-blur-md">
-              <Icon className="h-6 w-6 text-cyan-300" />
-              <h2 className="mt-5 text-xl font-semibold text-white">{capability.title}</h2>
-              <p className="mt-3 text-sm leading-6 text-zinc-300">{capability.description}</p>
-            </article>
-          );
-        })}
+      <section className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-6 backdrop-blur-md">
+        <div className="flex flex-col gap-6">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {inputs.map((input) => {
+              const Icon = input.icon;
+              return (
+                <div key={input.label} className="platform-input-card">
+                  <Icon className="h-5 w-5 text-cyan-200" />
+                  <span className="text-sm text-zinc-100">{input.label}</span>
+                  <div className="platform-input-arrow" aria-hidden="true" />
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="platform-funnel">
+            <svg viewBox="0 0 240 120" aria-hidden="true" className="platform-funnel-svg">
+              <defs>
+                <linearGradient id="funnelGlow" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="rgba(34, 211, 238, 0.6)" />
+                  <stop offset="50%" stopColor="rgba(16, 185, 129, 0.6)" />
+                  <stop offset="100%" stopColor="rgba(34, 211, 238, 0.6)" />
+                </linearGradient>
+              </defs>
+              <ellipse cx="120" cy="44" rx="85" ry="24" className="platform-funnel-ring platform-funnel-ring-1" />
+              <ellipse cx="120" cy="76" rx="55" ry="16" className="platform-funnel-ring platform-funnel-ring-2" />
+              <ellipse cx="120" cy="96" rx="30" ry="10" className="platform-funnel-ring platform-funnel-ring-3" />
+              <line x1="120" y1="24" x2="120" y2="108" className="platform-funnel-axis" />
+              <line x1="120" y1="24" x2="120" y2="108" className="platform-funnel-axis platform-funnel-axis-flow" />
+            </svg>
+          </div>
+
+          <div className="platform-down-arrows" aria-hidden="true">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <span key={index} className="platform-down-arrow" />
+            ))}
+          </div>
+
+          <div className="platform-stack-grid">
+            {layers.map((layer, index) => (
+              <div key={layer} className="platform-stack-row">
+                <span className="platform-pill">{leftPills[index]}</span>
+                <span
+                  className="platform-flow-line platform-flow-line-left"
+                  style={{ '--flow-delay': `${index * 0.35}s` } as React.CSSProperties}
+                  aria-hidden="true"
+                />
+                <div className="platform-layer">
+                  <span>{layer}</span>
+                </div>
+                <span
+                  className="platform-flow-line platform-flow-line-right"
+                  style={{ '--flow-delay': `${index * 0.35 + 0.2}s` } as React.CSSProperties}
+                  aria-hidden="true"
+                />
+                <span className="platform-pill">{rightPills[index]}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
 
       <section className="rounded-lg border border-zinc-800 bg-zinc-900/45 p-6 backdrop-blur-md">
@@ -81,3 +124,4 @@ export default function PlatformPage() {
     </main>
   );
 }
+
