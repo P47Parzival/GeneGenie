@@ -52,3 +52,37 @@
  GET /portal 200 in 46ms (next.js: 22ms, application-code: 24ms)
  GET /applications 200 in 36ms (next.js: 3ms, application-code: 33ms)
  GET /platform 200 in 33ms (next.js: 3ms, application-code: 30ms)
+✓ Compiled in 117ms
+ GET /platform 200 in 269ms (next.js: 110ms, application-code: 159ms)
+ GET /platform 200 in 84ms (next.js: 5ms, application-code: 79ms)
+✓ Compiled in 220ms
+✓ Compiled in 256ms
+ GET /platform 200 in 347ms (next.js: 125ms, application-code: 222ms)
+ GET /platform 200 in 186ms (next.js: 4ms, application-code: 182ms)
+ GET /platform 200 in 113ms (next.js: 4ms, application-code: 109ms)
+ GET /platform 200 in 58ms (next.js: 3ms, application-code: 55ms)
+✓ Compiled in 211ms
+✓ Compiled in 177ms
+ GET /platform 200 in 174ms (next.js: 103ms, application-code: 70ms)
+ GET /platform 200 in 51ms (next.js: 3ms, application-code: 48ms)
+✓ Compiled in 225ms
+✓ Compiled in 249ms
+ GET /platform 200 in 202ms (next.js: 127ms, application-code: 75ms)
+ GET /platform 200 in 97ms (next.js: 6ms, application-code: 90ms)
+✓ Compiled in 211ms
+✓ Compiled in 194ms
+ GET /platform 200 in 201ms (next.js: 118ms, application-code: 83ms)
+ GET /platform 200 in 83ms (next.js: 6ms, application-code: 77ms)
+✓ Compiled in 196ms
+✓ Compiled in 204ms
+ GET /platform 200 in 313ms (next.js: 3ms, application-code: 310ms)
+ GET /platform 200 in 131ms (next.js: 5ms, application-code: 126ms)
+ GET /platform 200 in 137ms (next.js: 6ms, application-code: 131ms)
+ GET /platform 200 in 133ms (next.js: 4ms, application-code: 129ms)
+ GET /platform 200 in 138ms (next.js: 5ms, application-code: 133ms)
+ GET /platform 200 in 103ms (next.js: 3ms, application-code: 100ms)
+ GET /platform 200 in 246ms (next.js: 111ms, application-code: 135ms)
+ GET /platform 200 in 58ms (next.js: 4ms, application-code: 54ms)
+✓ Compiled in 202ms
+✓ Compiled in 255ms
+ GET /portal 200 in 41ms (next.js: 13ms, application-code: 27ms)

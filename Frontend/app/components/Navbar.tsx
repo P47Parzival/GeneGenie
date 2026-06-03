@@ -1,6 +1,6 @@
 'use client';
 
-import { Dna, Radio } from 'lucide-react';
+import { Dna } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -43,10 +43,12 @@ export default function Navbar() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2 rounded-md border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-sm text-emerald-200">
-          <Radio className="h-4 w-4 text-cyan-300" />
-          Backend ready
-        </div>
+        <Link
+          href="/auth"
+          className="inline-flex items-center justify-center rounded-md border border-zinc-700 px-4 py-2 text-sm font-semibold text-zinc-100 transition hover:border-cyan-400/60 hover:text-cyan-100"
+        >
+          Get started
+        </Link>
         <Link
           href="/portal"
           className="inline-flex items-center justify-center rounded-md bg-cyan-300 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-cyan-200"
