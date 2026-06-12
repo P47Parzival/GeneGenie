@@ -40,13 +40,20 @@ echo "[3/4] Seeding database..."
 python -m database.seed
 echo "      Seeding complete"
 
-# --- Start API Server ---
-echo "[4/4] Starting BioNexus India V2 API..."
-echo "      Host: ${API_HOST:-0.0.0.0}"
-echo "      Port: ${API_PORT:-8000}"
-echo "=============================================="
+# --- Start Application ---
+LOG_LEVEL_LOWER=$(echo "${LOG_LEVEL:-info}" | tr '[:upper:]' '[:lower:]')
 
-exec uvicorn api.main:app \
-    --host "${API_HOST:-0.0.0.0}" \
-    --port "${API_PORT:-8000}" \
-    --log-level "${LOG_LEVEL:-info}"
+if [ "$#" -gt 0 ]; then
+    echo "[4/4] Starting custom command: $@"
+    echo "=============================================="
+    exec "$@"
+else
+    echo "[4/4] Starting BioNexus India V2 API..."
+    echo "      Host: ${API_HOST:-0.0.0.0}"
+    echo "      Port: ${API_PORT:-8000}"
+    echo "=============================================="
+    exec uvicorn api.main:app \
+        --host "${API_HOST:-0.0.0.0}" \
+        --port "${API_PORT:-8000}" \
+        --log-level "$LOG_LEVEL_LOWER"
+fi

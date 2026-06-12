@@ -8,7 +8,7 @@ FROM python:3.11-slim AS base
 
 # System deps for psycopg2, reportlab, and crypto
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev gcc curl \
+    libpq-dev gcc curl postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
