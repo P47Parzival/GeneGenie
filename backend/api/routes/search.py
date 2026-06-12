@@ -1,28 +1,30 @@
 """
-BioNexus India V1 — Search Route
+BioNexus India V2 — Search Route
 
 GET /search?q=  — Full-text search across all metadata fields
-                  with optional filters (same as /datasets)
+                  with optional filters
 
-Uses PostgreSQL's built-in full-text search (tsvector + tsquery)
-with the GIN index for efficient searches. Supports ranking
-by relevance.
+V2 update: Unauthenticated returns limited metadata;
+authenticated returns full metadata including contacts.
 """
 
 import math
 import logging
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select, func, desc
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas import (
     DatasetResponse,
+    DatasetPublicResponse,
     SearchResponse,
     PaginationMeta,
 )
 from database import get_session
-from database.models import Dataset
+from database.models import Dataset, User
+from services.auth_service import get_optional_user
 
 logger = logging.getLogger(__name__)
 
@@ -34,9 +36,8 @@ router = APIRouter(tags=["Search"])
     response_model=SearchResponse,
     summary="Full-text search across datasets",
     description=(
-        "Search across all dataset metadata fields (name, institution, disease, "
-        "population, state, source) using PostgreSQL full-text search. "
-        "Results are ranked by relevance. Filters can be combined with the search."
+        "Search across all dataset metadata fields using PostgreSQL full-text search. "
+        "Unauthenticated: limited metadata. Authenticated: full metadata."
     ),
 )
 async def search_datasets(
@@ -44,7 +45,7 @@ async def search_datasets(
         ...,
         min_length=1,
         max_length=500,
-        description="Search query (searched across name, institution, disease, population, state)",
+        description="Search query",
     ),
     disease: str | None = Query(None, description="Filter by disease association"),
     population: str | None = Query(None, description="Filter by population group"),
@@ -54,19 +55,14 @@ async def search_datasets(
     access_type: str | None = Query(None, description="Filter by access type"),
     page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(20, ge=1, le=100, description="Items per page"),
+    user: Optional[User] = Depends(get_optional_user),
     session: AsyncSession = Depends(get_session),
 ):
-    """
-    Full-text search with optional filters.
+    """Full-text search with optional filters and role-based metadata."""
 
-    Converts the search query to a tsquery and matches against the
-    pre-computed search_vector column (GIN-indexed for performance).
-    Results are ordered by relevance rank.
-    """
+    authenticated = user is not None
 
     # Convert search query to PostgreSQL tsquery
-    # Use plainto_tsquery for natural language queries
-    # (handles spaces, common words, etc.)
     ts_query = func.plainto_tsquery("english", q)
 
     # Base query with full-text search match
@@ -78,7 +74,6 @@ async def search_datasets(
         .where(Dataset.search_vector.op("@@")(ts_query))
     )
 
-    # Count query
     count_query = (
         select(func.count())
         .select_from(Dataset)
@@ -123,7 +118,7 @@ async def search_datasets(
     total_result = await session.execute(count_query)
     total = total_result.scalar_one()
 
-    # Apply pagination and ordering (by relevance rank, descending)
+    # Apply pagination and ordering
     offset = (page - 1) * limit
     query = query.order_by(desc("rank")).offset(offset).limit(limit)
 
@@ -131,11 +126,17 @@ async def search_datasets(
     result = await session.execute(query)
     rows = result.all()
 
-    # Extract Dataset objects from the (Dataset, rank) tuples
-    datasets = [DatasetResponse.model_validate(row[0]) for row in rows]
+    # Serialize based on auth status
+    datasets = []
+    for row in rows:
+        ds = row[0]
+        if authenticated:
+            datasets.append(DatasetResponse.model_validate(ds))
+        else:
+            datasets.append(DatasetPublicResponse.model_validate(ds))
 
     logger.info(
-        f"Search: q='{q}', filters={filters_applied}, "
+        f"Search: q='{q}', auth={authenticated}, "
         f"results={total}, page={page}"
     )
 

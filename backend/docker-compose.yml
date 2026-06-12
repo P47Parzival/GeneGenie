@@ -1,7 +1,8 @@
 # =============================================================================
-# BioNexus India V1 — Docker Compose
+# BioNexus India V2 — Docker Compose
 # =============================================================================
-# Entire stack runs with: docker-compose up --build
+# Full stack: docker-compose up --build
+# Services: PostgreSQL, Redis, API, Celery Worker
 # =============================================================================
 
 version: "3.9"
@@ -26,6 +27,21 @@ services:
       timeout: 5s
       retries: 10
 
+  # --- Redis (Celery broker + result backend) ---
+  redis:
+    image: redis:7-alpine
+    container_name: bionexus-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - bionexus_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   # --- BioNexus API Backend ---
   api:
     build:
@@ -36,22 +52,59 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql+asyncpg://bionexus:bionexus_secret@db:5432/bionexus
       SYNC_DATABASE_URL: postgresql://bionexus:bionexus_secret@db:5432/bionexus
+      REDIS_URL: redis://redis:6379/0
       API_HOST: "0.0.0.0"
       API_PORT: "8000"
       LOG_LEVEL: "INFO"
       INGESTION_TIMEOUT: "30"
       INGESTION_MAX_RETRIES: "3"
       RAW_DATA_DIR: "data/raw"
+      UPLOAD_DIR: "data/uploads"
+      MAX_UPLOAD_SIZE_MB: "10"
+      JWT_SECRET_KEY: "bionexus-docker-dev-secret-change-in-production"
+      SMTP_HOST: ""
+      SMTP_FROM_EMAIL: "noreply@bionexus.in"
     ports:
       - "8000:8000"
     volumes:
       - bionexus_rawdata:/app/data/raw
+      - bionexus_uploads:/app/data/uploads
+
+  # --- Celery Worker (notification delivery) ---
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bionexus-worker
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://bionexus:bionexus_secret@db:5432/bionexus
+      SYNC_DATABASE_URL: postgresql://bionexus:bionexus_secret@db:5432/bionexus
+      REDIS_URL: redis://redis:6379/0
+      LOG_LEVEL: "INFO"
+      SMTP_HOST: ""
+      SMTP_FROM_EMAIL: "noreply@bionexus.in"
+      UPLOAD_DIR: "data/uploads"
+    command: celery -A workers.celery_app worker --loglevel=info -Q notifications,celery
+    volumes:
+      - bionexus_uploads:/app/data/uploads
 
 volumes:
   bionexus_pgdata:
     driver: local
+  bionexus_redis:
+    driver: local
   bionexus_rawdata:
+    driver: local
+  bionexus_uploads:
     driver: local

@@ -1,13 +1,17 @@
 """
-BioNexus India V1 — Dataset Routes
+BioNexus India V2 — Dataset Routes
 
-GET /datasets       — paginated list with filters
+GET /datasets       — paginated list with filters (public: limited, auth: full)
 GET /datasets/{id}  — full metadata for one dataset
+
+V2 update: Unauthenticated requests return limited metadata;
+authenticated requests return full metadata including contact details.
 """
 
 import math
 import uuid
 import logging
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
@@ -15,15 +19,25 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.schemas import (
     DatasetResponse,
+    DatasetPublicResponse,
     DatasetListResponse,
     PaginationMeta,
 )
 from database import get_session
-from database.models import Dataset
+from database.models import Dataset, User
+from services.auth_service import get_optional_user
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["Datasets"])
+
+
+def _serialize_dataset(dataset: Dataset, authenticated: bool) -> DatasetResponse | DatasetPublicResponse:
+    """Serialize dataset based on authentication status."""
+    if authenticated:
+        return DatasetResponse.model_validate(dataset)
+    else:
+        return DatasetPublicResponse.model_validate(dataset)
 
 
 @router.get(
@@ -32,6 +46,7 @@ router = APIRouter(tags=["Datasets"])
     summary="List datasets with filters",
     description=(
         "Returns a paginated list of dataset metadata records. "
+        "Unauthenticated: limited metadata. Authenticated: full metadata. "
         "All filter parameters are optional and can be combined."
     ),
 )
@@ -44,9 +59,12 @@ async def list_datasets(
     access_type: str | None = Query(None, description="Filter by access type: open, managed, controlled"),
     page: int = Query(1, ge=1, description="Page number (1-indexed)"),
     limit: int = Query(20, ge=1, le=100, description="Items per page (max 100)"),
+    user: Optional[User] = Depends(get_optional_user),
     session: AsyncSession = Depends(get_session),
 ):
     """List datasets with optional filters and pagination."""
+
+    authenticated = user is not None
 
     # Build base query
     query = select(Dataset)
@@ -90,7 +108,7 @@ async def list_datasets(
     datasets = result.scalars().all()
 
     return DatasetListResponse(
-        data=[DatasetResponse.model_validate(d) for d in datasets],
+        data=[_serialize_dataset(d, authenticated) for d in datasets],
         pagination=PaginationMeta(
             page=page,
             limit=limit,
@@ -102,12 +120,13 @@ async def list_datasets(
 
 @router.get(
     "/datasets/{dataset_id}",
-    response_model=DatasetResponse,
+    response_model=DatasetResponse | DatasetPublicResponse,
     summary="Get dataset by ID",
-    description="Returns the full metadata for a single dataset by its UUID.",
+    description="Returns metadata for a single dataset. Full metadata requires authentication.",
 )
 async def get_dataset(
     dataset_id: uuid.UUID,
+    user: Optional[User] = Depends(get_optional_user),
     session: AsyncSession = Depends(get_session),
 ):
     """Get a single dataset by its ID."""
@@ -123,4 +142,4 @@ async def get_dataset(
             detail=f"Dataset with ID '{dataset_id}' not found",
         )
 
-    return DatasetResponse.model_validate(dataset)
+    return _serialize_dataset(dataset, user is not None)

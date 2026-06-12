@@ -1,5 +1,5 @@
 """
-BioNexus India V1 — Centralized Configuration
+BioNexus India V2 — Centralized Configuration
 
 All application settings are loaded from environment variables (or .env file).
 This is the single source of truth for configuration across all modules.
@@ -42,6 +42,49 @@ class Settings(BaseSettings):
     raw_data_dir: str = Field(
         default="data/raw",
         description="Directory to store raw fetched responses for debugging",
+    )
+
+    # --- V2: JWT Authentication ---
+    jwt_secret_key: str = Field(
+        default="bionexus-dev-secret-key-change-in-production-immediately",
+        description="Secret key for JWT token signing (CHANGE IN PRODUCTION)",
+    )
+    jwt_algorithm: str = Field(
+        default="HS256", description="JWT signing algorithm"
+    )
+    access_token_expire_minutes: int = Field(
+        default=30, description="Access token expiry in minutes"
+    )
+    refresh_token_expire_days: int = Field(
+        default=7, description="Refresh token expiry in days"
+    )
+
+    # --- V2: Redis (Celery broker) ---
+    redis_url: str = Field(
+        default="redis://localhost:6379/0",
+        description="Redis connection URL for Celery task queue",
+    )
+
+    # --- V2: Email / SMTP ---
+    smtp_host: str = Field(default="", description="SMTP server host")
+    smtp_port: int = Field(default=587, description="SMTP server port")
+    smtp_user: str = Field(default="", description="SMTP username")
+    smtp_password: str = Field(default="", description="SMTP password")
+    smtp_from_email: str = Field(
+        default="noreply@bionexus.in", description="From address for emails"
+    )
+    smtp_from_name: str = Field(
+        default="BioNexus India", description="From display name"
+    )
+    smtp_use_tls: bool = Field(default=True, description="Use TLS for SMTP")
+
+    # --- V2: File Uploads ---
+    upload_dir: str = Field(
+        default="data/uploads",
+        description="Directory for file uploads and generated PDFs",
+    )
+    max_upload_size_mb: int = Field(
+        default=10, description="Maximum upload file size in MB"
     )
 
     model_config = {

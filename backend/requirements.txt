@@ -1,4 +1,4 @@
-# BioNexus India V1 — Dependencies
+# BioNexus India V2 — Dependencies
 
 # API Framework
 fastapi==0.115.6
@@ -27,3 +27,21 @@ pydantic-settings==2.7.1
 
 # Utilities
 python-dateutil==2.9.0
+
+# --- V2: Authentication ---
+python-jose[cryptography]==3.3.0
+bcrypt==4.2.1
+python-multipart==0.0.18
+
+# --- V2: PDF Generation ---
+reportlab==4.2.5
+
+# --- V2: Task Queue ---
+celery[redis]==5.4.0
+redis==5.2.1
+
+# --- V2: Email ---
+aiosmtplib==3.0.2
+
+# --- V2: File handling ---
+aiofiles==24.1.0

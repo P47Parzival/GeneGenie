@@ -1,8 +1,9 @@
 """
-BioNexus India V1 — Seed Data
+BioNexus India V2 — Seed Data
 
-10 realistic Indian biological dataset metadata records for immediate testing.
-These represent actual research areas and institutions across India.
+V1: 10 realistic Indian biological dataset metadata records.
+V2: Admin user, institution users, institutions, researcher users,
+    and a sample access request.
 
 Usage:
     python -m database.seed
@@ -11,16 +12,23 @@ Usage:
 import uuid
 import asyncio
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from sqlalchemy import select
 
 from database import async_session_factory, engine
-from database.models import Base, Dataset
+from database.models import (
+    Base, Dataset, User, Institution, AccessRequest, AccessRequestTransition,
+)
+from services.auth_service import hash_password
 
 logger = logging.getLogger(__name__)
 
-# 10 realistic Indian biological datasets
+
+# =============================================================================
+# V1 Seed Datasets (unchanged)
+# =============================================================================
+
 SEED_DATASETS = [
     {
         "dataset_id": uuid.uuid5(uuid.NAMESPACE_URL, "indigenomes-wgs-1029"),
@@ -215,48 +223,228 @@ SEED_DATASETS = [
 ]
 
 
+# =============================================================================
+# V2 Seed Data
+# =============================================================================
+
+# Fixed UUIDs for seed users and institutions
+ADMIN_ID = uuid.uuid5(uuid.NAMESPACE_URL, "admin@bionexus.in")
+IGIB_INST_ID = uuid.uuid5(uuid.NAMESPACE_URL, "institution-csir-igib")
+RCB_INST_ID = uuid.uuid5(uuid.NAMESPACE_URL, "institution-rcb-ibdc")
+IGIB_USER_ID = uuid.uuid5(uuid.NAMESPACE_URL, "nodal@igib.res.in")
+RCB_USER_ID = uuid.uuid5(uuid.NAMESPACE_URL, "nodal@rcb.res.in")
+RESEARCHER1_ID = uuid.uuid5(uuid.NAMESPACE_URL, "researcher1@iitd.ac.in")
+RESEARCHER2_ID = uuid.uuid5(uuid.NAMESPACE_URL, "researcher2@iisc.ac.in")
+
+
+SEED_INSTITUTIONS = [
+    {
+        "id": IGIB_INST_ID,
+        "institution_name": "CSIR-Institute of Genomics and Integrative Biology (IGIB)",
+        "institution_type": "government",
+        "state": "Delhi",
+        "nodal_officer_name": "Dr. Sridhar Sivasubbu",
+        "nodal_officer_email": "nodal@igib.res.in",
+        "nodal_officer_phone": "+91-11-27666156",
+        "funding_source": "DBT",
+        "ibdc_registration_number": "IBDC-IGIB-001",
+        "is_verified": True,
+        "verified_at": datetime(2025, 1, 15),
+        "verified_by": ADMIN_ID,
+    },
+    {
+        "id": RCB_INST_ID,
+        "institution_name": "Regional Centre for Biotechnology (RCB), Faridabad",
+        "institution_type": "government",
+        "state": "Haryana",
+        "nodal_officer_name": "Dr. Shubhra Acharya",
+        "nodal_officer_email": "nodal@rcb.res.in",
+        "nodal_officer_phone": "+91-129-2848800",
+        "funding_source": "DBT",
+        "ibdc_registration_number": "IBDC-RCB-001",
+        "is_verified": True,
+        "verified_at": datetime(2025, 1, 15),
+        "verified_by": ADMIN_ID,
+    },
+]
+
+SEED_USERS = [
+    {
+        "id": ADMIN_ID,
+        "email": "admin@bionexus.in",
+        "hashed_password": hash_password("Admin@BioNexus2025"),
+        "full_name": "BioNexus Admin",
+        "role": "admin",
+        "institution_id": None,
+        "is_active": True,
+    },
+    {
+        "id": IGIB_USER_ID,
+        "email": "nodal@igib.res.in",
+        "hashed_password": hash_password("IGIB@Nodal2025"),
+        "full_name": "Dr. Sridhar Sivasubbu",
+        "role": "institution",
+        "institution_id": IGIB_INST_ID,
+        "is_active": True,
+    },
+    {
+        "id": RCB_USER_ID,
+        "email": "nodal@rcb.res.in",
+        "hashed_password": hash_password("RCB@Nodal2025"),
+        "full_name": "Dr. Shubhra Acharya",
+        "role": "institution",
+        "institution_id": RCB_INST_ID,
+        "is_active": True,
+    },
+    {
+        "id": RESEARCHER1_ID,
+        "email": "researcher@iitd.ac.in",
+        "hashed_password": hash_password("Research@IIT2025"),
+        "full_name": "Dr. Priya Sharma",
+        "role": "researcher",
+        "institution_id": None,
+        "is_active": True,
+    },
+    {
+        "id": RESEARCHER2_ID,
+        "email": "researcher@iisc.ac.in",
+        "hashed_password": hash_password("Research@IISc2025"),
+        "full_name": "Dr. Amit Verma",
+        "role": "researcher",
+        "institution_id": None,
+        "is_active": True,
+    },
+]
+
+
 async def seed_database():
     """
-    Insert seed datasets into the database.
-
-    Skips records that already exist (based on dataset_id) to make
-    this script idempotent — safe to run multiple times.
+    Insert all seed data into the database.
+    Idempotent — safe to run multiple times.
     """
     async with async_session_factory() as session:
-        inserted = 0
-        skipped = 0
-
-        for record in SEED_DATASETS:
-            # Check if already exists
+        # --- Seed Institutions (V2) — WITHOUT verified_by first (FK ordering) ---
+        for record in SEED_INSTITUTIONS:
             existing = await session.execute(
-                select(Dataset).where(
-                    Dataset.dataset_id == record["dataset_id"]
-                )
+                select(Institution).where(Institution.id == record["id"])
             )
-            if existing.scalar_one_or_none() is not None:
-                skipped += 1
-                logger.info(f"Skipping existing dataset: {record['name']}")
-                continue
+            if existing.scalar_one_or_none() is None:
+                # Insert without verified_by to avoid FK violation
+                inst_data = {k: v for k, v in record.items() if k != "verified_by"}
+                inst_data["is_verified"] = False  # Will update after admin exists
+                inst_data["verified_at"] = None
+                session.add(Institution(**inst_data))
+                logger.info(f"Inserted institution: {record['institution_name']}")
 
-            dataset = Dataset(
-                date_ingested=datetime.utcnow(),
-                **record,
+        await session.flush()
+
+        # --- Seed Users (V2) ---
+        for record in SEED_USERS:
+            existing = await session.execute(
+                select(User).where(User.id == record["id"])
             )
-            session.add(dataset)
-            inserted += 1
-            logger.info(f"Inserted dataset: {record['name']}")
+            if existing.scalar_one_or_none() is None:
+                session.add(User(**record))
+                logger.info(f"Inserted user: {record['email']} (role={record['role']})")
+
+        await session.flush()
+
+        # --- Update Institutions with verified_by now that admin exists ---
+        for record in SEED_INSTITUTIONS:
+            if record.get("verified_by"):
+                result = await session.execute(
+                    select(Institution).where(Institution.id == record["id"])
+                )
+                inst = result.scalar_one_or_none()
+                if inst and not inst.is_verified:
+                    inst.is_verified = True
+                    inst.verified_at = record.get("verified_at", datetime.utcnow())
+                    inst.verified_by = record["verified_by"]
+                    logger.info(f"Verified institution: {inst.institution_name}")
+
+        await session.flush()
+
+        # --- Seed Datasets (V1) ---
+        inserted_ds = 0
+        for record in SEED_DATASETS:
+            existing = await session.execute(
+                select(Dataset).where(Dataset.dataset_id == record["dataset_id"])
+            )
+            if existing.scalar_one_or_none() is None:
+                # Link first dataset to IGIB institution
+                extra = {}
+                if record["source"] == "indigenomes":
+                    extra["managing_institution_id"] = IGIB_INST_ID
+                elif record["source"] == "ibdc":
+                    extra["managing_institution_id"] = RCB_INST_ID
+
+                session.add(Dataset(
+                    date_ingested=datetime.utcnow(),
+                    **record,
+                    **extra,
+                ))
+                inserted_ds += 1
+                logger.info(f"Inserted dataset: {record['name'][:60]}")
+
+        await session.flush()
+
+        # --- Seed Sample Access Request (V2) ---
+        ar_id = uuid.uuid5(uuid.NAMESPACE_URL, "sample-access-request-1")
+        existing_ar = await session.execute(
+            select(AccessRequest).where(AccessRequest.id == ar_id)
+        )
+        if existing_ar.scalar_one_or_none() is None:
+            # Get the IndiGenomes dataset
+            ds_id = uuid.uuid5(uuid.NAMESPACE_URL, "indigenomes-wgs-1029")
+
+            ar = AccessRequest(
+                id=ar_id,
+                requesting_user_id=RESEARCHER1_ID,
+                dataset_id=ds_id,
+                status="approved",
+                purpose_of_use="Study of genetic variants associated with Type 2 Diabetes in Indian populations",
+                institution_affiliation="Indian Institute of Technology Delhi (IIT-D)",
+                expected_duration_days=365,
+                will_data_be_published=True,
+                ethics_approval_number="IITD/IEC/2024/A-15",
+                requested_access_type="managed",
+                reviewer_id=IGIB_USER_ID,
+                submitted_at=datetime(2025, 2, 1),
+                approved_at=datetime(2025, 2, 10),
+                expires_at=datetime(2026, 2, 10),
+            )
+            session.add(ar)
+            await session.flush()
+
+            # Add transitions
+            transitions = [
+                ("draft", RESEARCHER1_ID, "Request created"),
+                ("submitted", RESEARCHER1_ID, "Submitted for review"),
+                ("under_review", IGIB_USER_ID, "Review started"),
+                ("approved", IGIB_USER_ID, "Access granted — valid for 1 year"),
+            ]
+            prev_status = None
+            for to_status, actor_id, reason in transitions:
+                session.add(AccessRequestTransition(
+                    id=uuid.uuid4(),
+                    access_request_id=ar_id,
+                    from_status=prev_status,
+                    to_status=to_status,
+                    actor_id=actor_id,
+                    reason=reason,
+                ))
+                prev_status = to_status
+
+            logger.info("Inserted sample access request (approved)")
 
         await session.commit()
-        logger.info(
-            f"Seed complete: {inserted} inserted, {skipped} skipped "
-            f"(total seed records: {len(SEED_DATASETS)})"
-        )
+        logger.info("Seed complete!")
 
 
 async def main():
     """Entry point for running seed as a standalone script."""
     logging.basicConfig(level=logging.INFO)
-    logger.info("Starting database seed...")
+    logger.info("Starting database seed (V2)...")
     await seed_database()
     await engine.dispose()
     logger.info("Done.")
