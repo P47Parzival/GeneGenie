@@ -259,3 +259,55 @@ https://react.dev/link/hydration-mismatch
     at performWorkOnRootViaSchedulerTask (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:10255:9)
     at MessagePort.performWorkUntilDeadline (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_compiled_1amofcm._.js:2647:64) (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:3439:25)
 [browser] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_1ybzpk2._.js:2477:13)
+[browser] ⨯ unhandledRejection: SecurityError: Failed to read the 'sessionStorage' property from 'Window': Access is denied for this document.
+    at <unknown> (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_client_0r5nbpw._.js:7888:17)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/platform" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <script>
+                      <script>
+                      <RootLayout>
+                        <html lang="en" className="inter_fa93...">
+                          <body
+-                           data-new-gr-c-s-check-loaded="14.1138.0"
+-                           data-gr-ext-installed=""
+                          >
+                  ...
+ 
+    at <unknown> (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:3439:25)
+    at runWithFiberInDEV (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:965:74)
+    at emitPendingHydrationWarnings (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:3438:13)
+    at completeWork (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:6885:102)
+    at runWithFiberInDEV (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:965:131)
+    at completeUnitOfWork (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:9622:23)
+    at performUnitOfWork (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:9557:28)
+    at workLoopConcurrentByScheduler (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:9551:58)
+    at renderRootConcurrent (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:9534:71)
+    at performWorkOnRoot (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:9061:150)
+    at performWorkOnRootViaSchedulerTask (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:10255:9)
+    at MessagePort.performWorkUntilDeadline (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_compiled_1amofcm._.js:2647:64) (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_compiled_react-dom_096_9a-._.js:3439:25)
+[browser] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior (file://C:/Users/dhruv/OneDrive/Desktop/BCI NN architectures/GeneGenie/Frontend/.next/dev/static/chunks/node_modules_next_dist_1ybzpk2._.js:2477:13)

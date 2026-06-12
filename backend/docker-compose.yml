@@ -1,0 +1,57 @@
+# =============================================================================
+# BioNexus India V1 — Docker Compose
+# =============================================================================
+# Entire stack runs with: docker-compose up --build
+# =============================================================================
+
+version: "3.9"
+
+services:
+  # --- PostgreSQL Database ---
+  db:
+    image: postgres:16-alpine
+    container_name: bionexus-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bionexus
+      POSTGRES_PASSWORD: bionexus_secret
+      POSTGRES_DB: bionexus
+    ports:
+      - "5433:5432"
+    volumes:
+      - bionexus_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bionexus -d bionexus"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # --- BioNexus API Backend ---
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bionexus-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://bionexus:bionexus_secret@db:5432/bionexus
+      SYNC_DATABASE_URL: postgresql://bionexus:bionexus_secret@db:5432/bionexus
+      API_HOST: "0.0.0.0"
+      API_PORT: "8000"
+      LOG_LEVEL: "INFO"
+      INGESTION_TIMEOUT: "30"
+      INGESTION_MAX_RETRIES: "3"
+      RAW_DATA_DIR: "data/raw"
+    ports:
+      - "8000:8000"
+    volumes:
+      - bionexus_rawdata:/app/data/raw
+
+volumes:
+  bionexus_pgdata:
+    driver: local
+  bionexus_rawdata:
+    driver: local

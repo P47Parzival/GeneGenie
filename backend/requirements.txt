@@ -1,0 +1,29 @@
+# BioNexus India V1 — Dependencies
+
+# API Framework
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+
+# Database
+sqlalchemy[asyncio]==2.0.36
+asyncpg==0.30.0
+psycopg2-binary==2.9.10
+alembic==1.14.1
+
+# HTTP Client
+httpx==0.28.1
+
+# Retry Logic
+tenacity==9.0.0
+
+# HTML Parsing (for scraping adapters)
+beautifulsoup4==4.12.3
+lxml==5.3.0
+
+# Configuration
+python-dotenv==1.0.1
+pydantic==2.10.4
+pydantic-settings==2.7.1
+
+# Utilities
+python-dateutil==2.9.0
