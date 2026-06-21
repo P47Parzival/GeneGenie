@@ -13,10 +13,17 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .clinvar import ClinVarAnnotator
 from .config import get_settings
-from .db import init_db, save_annotations
+from .db import get_stats, init_db, save_annotations
 from .dbsnp import DbSnpLookup
 from .gnomad import GnomadLookup
-from .models import AnnotateResponse, Annotation, HealthResponse, VariantQuery
+from .models import (
+    AnnotateResponse,
+    Annotation,
+    HealthResponse,
+    ReferenceStatus,
+    StatsResponse,
+    VariantQuery,
+)
 from .vcf_io import parse_vcf_text
 
 settings = get_settings()
@@ -50,6 +57,21 @@ def health() -> HealthResponse:
         clinvar_loaded=annotator.available,
         dbsnp_loaded=dbsnp.available,
         gnomad_loaded=gnomad.available,
+    )
+
+
+@app.get("/stats", response_model=StatsResponse)
+def stats() -> StatsResponse:
+    metrics, significance, recent = get_stats()
+    return StatsResponse(
+        references=ReferenceStatus(
+            clinvar=annotator.available,
+            dbsnp=dbsnp.available,
+            gnomad=gnomad.available,
+        ),
+        metrics=metrics,
+        significance=significance,
+        recent=recent,
     )
 
 

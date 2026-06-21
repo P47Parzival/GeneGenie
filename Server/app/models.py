@@ -44,3 +44,43 @@ class HealthResponse(BaseModel):
     clinvar_loaded: bool
     dbsnp_loaded: bool
     gnomad_loaded: bool
+
+
+# --- Portal dashboard stats -------------------------------------------------
+
+class ReferenceStatus(BaseModel):
+    clinvar: bool
+    dbsnp: bool
+    gnomad: bool
+
+
+class StatsMetrics(BaseModel):
+    total_annotations: int
+    total_batches: int
+    matched_count: int
+    pathogenic_count: int
+    match_rate: float  # 0..1, matched / total
+
+
+class SignificanceBucket(BaseModel):
+    label: str
+    count: int
+
+
+class RecentVariant(BaseModel):
+    chrom: str
+    pos: int
+    ref: str
+    alt: str
+    gene: str | None = None
+    variant: str | None = None
+    significance: str | None = None
+    matched: bool = False
+    created_at: str
+
+
+class StatsResponse(BaseModel):
+    references: ReferenceStatus
+    metrics: StatsMetrics
+    significance: list[SignificanceBucket]
+    recent: list[RecentVariant]

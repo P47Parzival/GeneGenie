@@ -1,83 +1,87 @@
 'use client';
 
-import { Activity, AlertCircle, Binary, Gauge, LayoutGrid, Loader2, ShieldCheck, Terminal } from 'lucide-react';
+import { Activity, AlertCircle, Binary, Database, FlaskConical, LayoutGrid, Loader2, ShieldCheck } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import SectionHeader from '../components/SectionHeader';
 
-interface DashboardMetrics {
-  totalSequencesAnalyzed: number;
-  modelConfidenceScore: number;
-  processingEfficiency: number;
-  activeBatchesCount: number;
+interface ReferenceStatus {
+  clinvar: boolean;
+  dbsnp: boolean;
+  gnomad: boolean;
 }
 
-interface SystemEvent {
-  id: string;
-  timestamp: string;
-  level: 'info' | 'success' | 'warning' | 'error';
-  message: string;
+interface StatsMetrics {
+  total_annotations: number;
+  total_batches: number;
+  matched_count: number;
+  pathogenic_count: number;
+  match_rate: number;
 }
 
-interface SequenceGridCell {
-  id: string;
-  status: 'idle' | 'active' | 'review' | 'blocked';
-  label?: string;
+interface SignificanceBucket {
+  label: string;
+  count: number;
 }
 
-interface DashboardPayload {
-  metrics: DashboardMetrics | null;
-  events: SystemEvent[];
-  grid: SequenceGridCell[];
+interface RecentVariant {
+  chrom: string;
+  pos: number;
+  ref: string;
+  alt: string;
+  gene: string | null;
+  variant: string | null;
+  significance: string | null;
+  matched: boolean;
+  created_at: string;
+}
+
+interface StatsPayload {
+  references: ReferenceStatus;
+  metrics: StatsMetrics;
+  significance: SignificanceBucket[];
+  recent: RecentVariant[];
 }
 
 type LoadState = 'loading' | 'ready' | 'empty' | 'error';
 
-async function fetchDashboardPayload(): Promise<DashboardPayload> {
-  await new Promise((resolve) => window.setTimeout(resolve, 700));
-
-  return {
-    metrics: null,
-    events: [],
-    grid: [],
-  };
+async function fetchStats(): Promise<StatsPayload> {
+  const res = await fetch('/api/stats', { cache: 'no-store' });
+  if (!res.ok) throw new Error('stats request failed');
+  return res.json();
 }
 
 export default function PortalPage() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
-  const [payload, setPayload] = useState<DashboardPayload | null>(null);
+  const [payload, setPayload] = useState<StatsPayload | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-
-    fetchDashboardPayload()
+    fetchStats()
       .then((data) => {
         if (!isMounted) return;
         setPayload(data);
-        setLoadState(data.metrics || data.events.length || data.grid.length ? 'ready' : 'empty');
+        setLoadState(data.metrics.total_annotations > 0 ? 'ready' : 'empty');
       })
       .catch(() => {
         if (!isMounted) return;
         setLoadState('error');
       });
-
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const hasMetrics = Boolean(payload?.metrics);
-  const hasEvents = Boolean(payload?.events.length);
-  const hasGrid = Boolean(payload?.grid.length);
-
   const metricCards = useMemo(
     () => [
-      { label: 'Total Sequences Analyzed', key: 'totalSequencesAnalyzed' as const, icon: Binary, suffix: '' },
-      { label: 'Model Confidence Score', key: 'modelConfidenceScore' as const, icon: ShieldCheck, suffix: '%' },
-      { label: 'Processing Efficiency', key: 'processingEfficiency' as const, icon: Gauge, suffix: '%' },
-      { label: 'Active Batches', key: 'activeBatchesCount' as const, icon: Activity, suffix: '' },
+      { label: 'Variants Annotated', icon: Binary, value: (m: StatsMetrics) => m.total_annotations.toLocaleString() },
+      { label: 'VCF Batches', icon: LayoutGrid, value: (m: StatsMetrics) => m.total_batches.toLocaleString() },
+      { label: 'ClinVar Match Rate', icon: ShieldCheck, value: (m: StatsMetrics) => `${Math.round(m.match_rate * 100)}%` },
+      { label: 'Pathogenic Findings', icon: Activity, value: (m: StatsMetrics) => m.pathogenic_count.toLocaleString() },
     ],
     [],
   );
+
+  const metrics = payload?.metrics;
 
   return (
     <main className="flex flex-col gap-6 pb-16">
@@ -87,114 +91,205 @@ export default function PortalPage() {
             icon={LayoutGrid}
             eyebrow="Authenticated portal"
             title="GeneGenie Operations Console"
-            description="A backend-ready interface skeleton for metrics, sequence visualization, and orchestration logs."
+            description="Live metrics from the annotation service: ClinVar, dbSNP, and gnomAD lookups."
           />
           <ConnectionBadge loadState={loadState} />
         </div>
       </section>
 
+      <ReferencePanel references={payload?.references} loadState={loadState} />
+
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {metricCards.map((metric) => {
           const Icon = metric.icon;
-          const value = payload?.metrics?.[metric.key];
           return (
-            <article key={metric.key} className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 backdrop-blur-md">
+            <article key={metric.label} className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 backdrop-blur-md">
               <div className="flex items-start justify-between gap-3">
                 <p className="text-sm text-zinc-400">{metric.label}</p>
                 <Icon className="h-5 w-5 text-cyan-300" />
               </div>
               {loadState === 'loading' ? (
                 <Skeleton className="mt-4 h-8 w-24" />
-              ) : hasMetrics && typeof value === 'number' ? (
-                <p className="mt-4 text-3xl font-semibold text-white">
-                  {value.toLocaleString()}
-                  {metric.suffix}
-                </p>
+              ) : metrics ? (
+                <p className="mt-4 text-3xl font-semibold text-white">{metric.value(metrics)}</p>
               ) : (
-                <EmptyInline message="Awaiting API data" />
+                <EmptyInline message="No data yet" />
               )}
             </article>
           );
         })}
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+      <section className="grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
         <article className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-5 backdrop-blur-md">
           <SectionHeader
-            icon={LayoutGrid}
-            eyebrow="Sequence grid"
-            title="Visualizer"
-            description="Grid cells render from SequenceGridCell records when the backend provides indexed sequence regions."
+            icon={FlaskConical}
+            eyebrow="Clinical significance"
+            title="Distribution"
+            description="ClinVar significance across all matched variants."
           />
-          <div className="mt-5 rounded-lg border border-zinc-800 bg-zinc-950/70 p-4">
+          <div className="mt-5">
             {loadState === 'loading' ? (
-              <div className="grid grid-cols-12 gap-1">
-                {Array.from({ length: 96 }).map((_, index) => (
-                  <Skeleton key={index} className="h-7 rounded-sm" />
-                ))}
+              <div className="space-y-3">
+                <Skeleton className="h-6 w-full" />
+                <Skeleton className="h-6 w-10/12" />
+                <Skeleton className="h-6 w-8/12" />
               </div>
-            ) : hasGrid ? (
-              <div className="grid grid-cols-12 gap-1">
-                {payload?.grid.map((cell) => <SequenceCell key={cell.id} cell={cell} />)}
-              </div>
+            ) : payload?.significance.length ? (
+              <SignificanceBars buckets={payload.significance} />
             ) : (
-              <EmptyPanel
-                title="No sequence regions loaded"
-                description="Connect a sequence index endpoint to populate the visualizer with real cell status records."
-              />
+              <EmptyPanel title="No matches yet" description="Annotate a VCF on the Annotate page to populate this." />
             )}
           </div>
         </article>
 
         <article className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-5 backdrop-blur-md">
           <SectionHeader
-            icon={Terminal}
-            eyebrow="System events"
-            title="Live Logs"
-            description="Event rows are ready for a streaming log or polling API integration."
+            icon={Database}
+            eyebrow="Activity"
+            title="Recent Variants"
+            description="Most recently annotated variants across all batches."
           />
-          <div className="mt-5 h-80 overflow-hidden rounded-lg border border-zinc-800 bg-black/70">
-            <div className="border-b border-zinc-800 px-4 py-3 font-mono text-xs text-zinc-500">event stream</div>
-            <div className="h-full p-4 font-mono text-xs">
-              {loadState === 'loading' ? (
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-11/12" />
-                  <Skeleton className="h-4 w-9/12" />
-                  <Skeleton className="h-4 w-10/12" />
-                </div>
-              ) : hasEvents ? (
-                <div className="space-y-2">
-                  {payload?.events.map((event) => (
-                    <p key={event.id} className={eventTone(event.level)}>
-                      {event.timestamp} [{event.level.toUpperCase()}] {event.message}
-                    </p>
-                  ))}
-                </div>
-              ) : (
-                <EmptyPanel
-                  title="No events available"
-                  description="Connect the orchestration event stream to show real workflow activity."
-                />
-              )}
-            </div>
+          <div className="mt-5">
+            {loadState === 'loading' ? (
+              <div className="space-y-2">
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-full" />
+                <Skeleton className="h-8 w-11/12" />
+              </div>
+            ) : payload?.recent.length ? (
+              <RecentTable rows={payload.recent} />
+            ) : (
+              <EmptyPanel title="No activity yet" description="Annotated variants will appear here." />
+            )}
           </div>
         </article>
       </section>
 
       {loadState === 'error' ? (
         <div className="rounded-lg border border-red-400/30 bg-red-400/10 p-4 text-sm text-red-100">
-          Dashboard data could not be loaded from the configured adapter.
+          Could not reach the annotation service. Check that the API is running and port 8000 is open.
         </div>
       ) : null}
     </main>
   );
 }
 
+function ReferencePanel({ references, loadState }: { references?: ReferenceStatus; loadState: LoadState }) {
+  const items = [
+    { key: 'clinvar' as const, label: 'ClinVar', detail: 'GRCh38 · full' },
+    { key: 'dbsnp' as const, label: 'dbSNP', detail: 'chr22 subset' },
+    { key: 'gnomad' as const, label: 'gnomAD', detail: 'exomes chr22 · AF_sas' },
+  ];
+  return (
+    <section className="grid gap-4 md:grid-cols-3">
+      {items.map((item) => {
+        const loaded = references?.[item.key];
+        return (
+          <article key={item.key} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              <Database className="h-5 w-5 text-cyan-300" />
+              <div>
+                <p className="font-semibold text-white">{item.label}</p>
+                <p className="text-xs text-zinc-500">{item.detail}</p>
+              </div>
+            </div>
+            {loadState === 'loading' ? (
+              <Skeleton className="h-6 w-16" />
+            ) : (
+              <span
+                className={`rounded-md border px-2.5 py-1 text-xs font-medium ${
+                  loaded
+                    ? 'border-emerald-400/40 bg-emerald-400/15 text-emerald-200'
+                    : 'border-zinc-700 bg-zinc-800/60 text-zinc-400'
+                }`}
+              >
+                {loaded ? 'Loaded' : 'Offline'}
+              </span>
+            )}
+          </article>
+        );
+      })}
+    </section>
+  );
+}
+
+function SignificanceBars({ buckets }: { buckets: SignificanceBucket[] }) {
+  const max = Math.max(...buckets.map((b) => b.count), 1);
+  return (
+    <div className="space-y-3">
+      {buckets.map((b) => (
+        <div key={b.label}>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-zinc-300">{b.label}</span>
+            <span className="font-mono text-zinc-400">{b.count}</span>
+          </div>
+          <div className="mt-1 h-2 overflow-hidden rounded-full bg-zinc-800">
+            <div className={`h-full rounded-full ${barTone(b.label)}`} style={{ width: `${(b.count / max) * 100}%` }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function RecentTable({ rows }: { rows: RecentVariant[] }) {
+  return (
+    <div className="overflow-hidden rounded-lg border border-zinc-800">
+      <table className="w-full text-left text-sm">
+        <thead className="bg-zinc-950/70 text-xs uppercase tracking-wide text-zinc-500">
+          <tr>
+            <th className="px-3 py-2 font-medium">Variant</th>
+            <th className="px-3 py-2 font-medium">Gene</th>
+            <th className="px-3 py-2 font-medium">Significance</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-zinc-800">
+          {rows.map((r, i) => (
+            <tr key={`${r.chrom}-${r.pos}-${r.alt}-${i}`} className="text-zinc-300">
+              <td className="px-3 py-2 font-mono text-xs">
+                {r.chrom}:{r.pos} {r.ref}&gt;{r.alt}
+              </td>
+              <td className="px-3 py-2 font-mono text-xs">{r.gene ?? '—'}</td>
+              <td className="px-3 py-2">
+                {r.matched ? (
+                  <span className={`rounded-md border px-2 py-0.5 text-xs ${significanceTone(r.significance)}`}>
+                    {r.significance ?? 'Unknown'}
+                  </span>
+                ) : (
+                  <span className="text-xs text-zinc-600">no match</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function barTone(label: string): string {
+  const s = label.toLowerCase();
+  if (s.includes('pathogenic') && !s.includes('benign')) return 'bg-red-400/70';
+  if (s.includes('benign')) return 'bg-emerald-400/70';
+  if (s.includes('uncertain') || s.includes('conflicting')) return 'bg-amber-400/70';
+  return 'bg-cyan-400/70';
+}
+
+function significanceTone(sig: string | null): string {
+  if (!sig) return 'border-zinc-700 bg-zinc-800/60 text-zinc-300';
+  const s = sig.toLowerCase();
+  if (s.includes('pathogenic') && !s.includes('benign')) return 'border-red-400/40 bg-red-400/15 text-red-200';
+  if (s.includes('benign')) return 'border-emerald-400/40 bg-emerald-400/15 text-emerald-200';
+  if (s.includes('uncertain') || s.includes('conflicting')) return 'border-amber-400/40 bg-amber-400/15 text-amber-200';
+  return 'border-cyan-400/40 bg-cyan-400/15 text-cyan-200';
+}
+
 function ConnectionBadge({ loadState }: { loadState: LoadState }) {
   const copy = {
     loading: 'Loading API state',
     ready: 'Data connected',
-    empty: 'No data connected',
+    empty: 'Connected · no data',
     error: 'Connection error',
   }[loadState];
 
@@ -221,24 +316,4 @@ function EmptyPanel({ title, description }: { title: string; description: string
       <p className="mt-2 max-w-md text-sm leading-6 text-zinc-500">{description}</p>
     </div>
   );
-}
-
-function SequenceCell({ cell }: { cell: SequenceGridCell }) {
-  const statusClass = {
-    idle: 'border-zinc-800 bg-zinc-900',
-    active: 'border-cyan-300/40 bg-cyan-400/25',
-    review: 'border-amber-300/40 bg-amber-400/20',
-    blocked: 'border-red-300/40 bg-red-400/20',
-  }[cell.status];
-
-  return <span title={cell.label ?? cell.id} className={`h-7 rounded-sm border ${statusClass}`} />;
-}
-
-function eventTone(level: SystemEvent['level']) {
-  return {
-    info: 'text-zinc-400',
-    success: 'text-emerald-300',
-    warning: 'text-amber-300',
-    error: 'text-red-300',
-  }[level];
 }

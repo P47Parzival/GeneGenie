@@ -8,11 +8,16 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime, Integer, String, create_engine
+from sqlalchemy import DateTime, Integer, String, create_engine, distinct, func, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column
 
 from .config import get_settings
-from .models import Annotation
+from .models import (
+    Annotation,
+    RecentVariant,
+    SignificanceBucket,
+    StatsMetrics,
+)
 
 
 class Base(DeclarativeBase):
@@ -49,6 +54,59 @@ def init_db() -> None:
 
         Path(_settings.database_url.removeprefix("sqlite:///")).parent.mkdir(parents=True, exist_ok=True)
     Base.metadata.create_all(engine)
+
+
+def get_stats() -> tuple[StatsMetrics, list[SignificanceBucket], list[RecentVariant]]:
+    """Aggregate dashboard stats from the annotations table."""
+    with Session(engine) as session:
+        total = session.scalar(select(func.count()).select_from(AnnotationRecord)) or 0
+        batches = session.scalar(select(func.count(distinct(AnnotationRecord.batch_id)))) or 0
+        matched = session.scalar(
+            select(func.count()).select_from(AnnotationRecord).where(AnnotationRecord.matched == 1)
+        ) or 0
+        pathogenic = session.scalar(
+            select(func.count())
+            .select_from(AnnotationRecord)
+            .where(AnnotationRecord.significance.like("%athogenic%"))
+        ) or 0
+
+        metrics = StatsMetrics(
+            total_annotations=total,
+            total_batches=batches,
+            matched_count=matched,
+            pathogenic_count=pathogenic,
+            match_rate=(matched / total) if total else 0.0,
+        )
+
+        sig_rows = session.execute(
+            select(AnnotationRecord.significance, func.count())
+            .where(AnnotationRecord.matched == 1)
+            .group_by(AnnotationRecord.significance)
+            .order_by(func.count().desc())
+        ).all()
+        significance = [
+            SignificanceBucket(label=label or "Unknown", count=count) for label, count in sig_rows
+        ]
+
+        recent_rows = session.scalars(
+            select(AnnotationRecord).order_by(AnnotationRecord.id.desc()).limit(12)
+        ).all()
+        recent = [
+            RecentVariant(
+                chrom=r.chrom,
+                pos=r.pos,
+                ref=r.ref,
+                alt=r.alt,
+                gene=r.gene,
+                variant=r.variant,
+                significance=r.significance,
+                matched=bool(r.matched),
+                created_at=r.created_at.isoformat(),
+            )
+            for r in recent_rows
+        ]
+
+    return metrics, significance, recent
 
 
 def save_annotations(batch_id: str, annotations: list[Annotation]) -> None:
