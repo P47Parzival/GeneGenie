@@ -1,0 +1,19 @@
+# SSH key — never commit
+genomics-key.pem
+*.pem
+venv
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Local config / secrets
+.env
+
+# Genomic data + results (live on EBS/S3, never in git)
+data/
+*.vcf
+*.vcf.gz
+*.vcf.gz.tbi
+*.db

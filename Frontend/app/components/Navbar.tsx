@@ -8,6 +8,7 @@ const links = [
   { label: 'Home', href: '/' },
   { label: 'Platform', href: '/platform' },
   { label: 'Applications', href: '/applications' },
+  { label: 'Annotate', href: '/annotate' },
 ];
 
 export default function Navbar() {
