@@ -10,10 +10,11 @@ S3 (warehouse)  ->  EC2 EBS (workbench)  ->  annotation  ->  results (SQLite -> 
 
 ## Current deployment
 
-- **EC2**: Ubuntu 26.04, t3.large, 100 GB EBS, region ap-south-1
+- **EC2**: Ubuntu 26.04, t3.large, 100 GB EBS, region ap-south-1, Elastic IP `3.6.214.176`
 - **S3 bucket**: `indian-genomics-data`
   - `clinvar/clinvar.vcf.gz` (+ .tbi) — full ClinVar GRCh38
   - `dbsnp/dbsnp_chr22.vcf.gz` (+ .tbi) — dbSNP chr22 subset (~16.1M variants)
+  - `gnomad/gnomad_exomes_chr22.vcf.bgz` (+ .tbi) — gnomAD v4.1 exomes chr22 (~4.8 GB), for AF / AF_sas
 - **Service**: runs under systemd as `genegenie.service` on port 8000
 - S3 access via the instance IAM role `genomics-ec2-s3-role` (no keys on the box)
 - VCF region queries use the system `tabix` CLI (htslib) — no compiled Python
@@ -24,8 +25,9 @@ S3 (warehouse)  ->  EC2 EBS (workbench)  ->  annotation  ->  results (SQLite -> 
 ```
 app/
   main.py           routes: /health, /annotate, /annotate/variant
-  clinvar.py        tabix-indexed ClinVar lookup (+ dbSNP rsID fallback)
+  clinvar.py        tabix-indexed ClinVar lookup (+ dbSNP rsID fallback, + gnomAD freqs)
   dbsnp.py          tabix-indexed dbSNP rsID lookup (RefSeq accession mapping)
+  gnomad.py         tabix-indexed gnomAD population frequencies (AF, AF_sas)
   vcf_io.py         user VCF parser
   db.py             results persistence (SQLite now, Postgres later)
   models.py         request/response schemas
@@ -34,6 +36,7 @@ scripts/
   01_install_tools.sh       Step 3 — tabix/samtools/bcftools/aws cli
   02_fetch_clinvar.sh       Step 4 — download ClinVar -> S3
   03_fetch_dbsnp_chr22.sh   Step 5 — dbSNP chr22 subset -> S3
+  05_fetch_gnomad_chr22.sh  Step 8 — gnomAD exomes chr22 (AF_sas) -> S3
   04_run_service.sh         pull ClinVar from S3 + run API (foreground)
 deploy/
   genegenie.service         systemd unit (production run)
@@ -67,7 +70,9 @@ Example response:
 ```
 
 If a variant isn't in ClinVar but falls in a loaded dbSNP subset (chr22), the
-response still carries its `variant` rsID with `matched: false`.
+response still carries its `variant` rsID with `matched: false`. When the variant
+falls in the loaded gnomAD subset (chr22), the response also carries
+`global_freq` (AF) and `south_asian_freq` (AF_sas).
 
 ## Network access
 
@@ -86,6 +91,8 @@ uvicorn app.main:app --reload
 
 ## Next
 
-- Step 8 — gnomAD chr22 with `AF_sas` (South-Asian allele frequency), the
-  India-specific differentiator.
 - Migrate results store SQLite -> RDS/Postgres (`DATABASE_URL`).
+- Wire the `/portal` dashboard to real annotation stats.
+- Production hardening: nginx + TLS in front of port 8000; restrict the SG once
+  the frontend is hosted (currently open to the dev machine's egress CIDRs).
+- Expand reference subsets beyond chr22 (more chromosomes for dbSNP/gnomAD).

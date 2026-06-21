@@ -15,12 +15,14 @@ from .clinvar import ClinVarAnnotator
 from .config import get_settings
 from .db import init_db, save_annotations
 from .dbsnp import DbSnpLookup
+from .gnomad import GnomadLookup
 from .models import AnnotateResponse, Annotation, HealthResponse, VariantQuery
 from .vcf_io import parse_vcf_text
 
 settings = get_settings()
 dbsnp = DbSnpLookup(settings.dbsnp_vcf)
-annotator = ClinVarAnnotator(settings.clinvar_vcf, dbsnp=dbsnp)
+gnomad = GnomadLookup(settings.gnomad_vcf)
+annotator = ClinVarAnnotator(settings.clinvar_vcf, dbsnp=dbsnp, gnomad=gnomad)
 
 app = FastAPI(title=settings.app_name, version=settings.app_version)
 
@@ -47,6 +49,7 @@ def health() -> HealthResponse:
         version=settings.app_version,
         clinvar_loaded=annotator.available,
         dbsnp_loaded=dbsnp.available,
+        gnomad_loaded=gnomad.available,
     )
 
 

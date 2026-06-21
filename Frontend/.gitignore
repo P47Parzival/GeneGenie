@@ -7,7 +7,7 @@
 .codex/skills/.system/**
 !.codex/prompts/
 !.codex/prompts/**
-
+.env.local
 .codex
 node*
 .next

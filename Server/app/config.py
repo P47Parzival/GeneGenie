@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     # Optional dbSNP subset (e.g. chr22) for rsID lookups.
     dbsnp_vcf: Path | None = Path("data/dbsnp_chr22.vcf.gz")
 
+    # Optional gnomAD subset (e.g. exomes chr22) for population allele frequencies.
+    gnomad_vcf: Path | None = Path("data/gnomad_exomes_chr22.vcf.bgz")
+
     # --- AWS / S3 ------------------------------------------------------------
     s3_bucket: str = "indian-genomics-data"
     aws_region: str = "ap-south-1"

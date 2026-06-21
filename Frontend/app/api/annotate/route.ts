@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 // Server-side proxy for VCF file uploads -> annotation backend.
-const API_BASE = process.env.ANNOTATION_API_BASE ?? 'http://43.204.32.86:8000';
+const API_BASE = process.env.ANNOTATION_API_BASE ?? 'http://3.6.214.176:8000';
 
 export async function POST(request: Request) {
   let form: FormData;

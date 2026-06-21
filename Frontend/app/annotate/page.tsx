@@ -15,6 +15,15 @@ interface Annotation {
   disease: string | null;
   clinvar_id: string | null;
   matched: boolean;
+  global_freq: number | null;
+  south_asian_freq: number | null;
+}
+
+function formatFreq(f: number | null): string {
+  if (f === null || f === undefined) return '—';
+  if (f === 0) return '0';
+  if (f < 0.0001) return f.toExponential(2);
+  return `${(f * 100).toFixed(4)}%`;
 }
 
 function significanceTone(sig: string | null): string {
@@ -185,16 +194,7 @@ function Field({ label, value, onChange, placeholder }: { label: string; value: 
 }
 
 function ResultCard({ annotation }: { annotation: Annotation }) {
-  if (!annotation.matched) {
-    return (
-      <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
-        <p className="font-mono text-sm text-zinc-300">
-          {annotation.chrom}:{annotation.pos} {annotation.ref}&gt;{annotation.alt}
-        </p>
-        <p className="mt-2 text-sm text-zinc-500">Not found in ClinVar.</p>
-      </div>
-    );
-  }
+  const hasFreq = annotation.global_freq !== null || annotation.south_asian_freq !== null;
 
   return (
     <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
@@ -203,15 +203,33 @@ function ResultCard({ annotation }: { annotation: Annotation }) {
           {annotation.chrom}:{annotation.pos} {annotation.ref}&gt;{annotation.alt}
         </p>
         <span className={`rounded-md border px-2.5 py-1 text-xs font-medium ${significanceTone(annotation.significance)}`}>
-          {annotation.significance ?? 'Unknown'}
+          {annotation.matched ? annotation.significance ?? 'Unknown' : 'Not in ClinVar'}
         </span>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-        <Detail label="Gene" value={annotation.gene} mono />
-        <Detail label="dbSNP" value={annotation.variant} mono />
-        <Detail label="Condition" value={annotation.disease} className="col-span-2" />
-        <Detail label="ClinVar ID" value={annotation.clinvar_id} mono />
-      </div>
+
+      {annotation.matched ? (
+        <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+          <Detail label="Gene" value={annotation.gene} mono />
+          <Detail label="dbSNP" value={annotation.variant} mono />
+          <Detail label="Condition" value={annotation.disease} className="col-span-2" />
+          <Detail label="ClinVar ID" value={annotation.clinvar_id} mono />
+        </div>
+      ) : (
+        <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+          <Detail label="dbSNP" value={annotation.variant} mono />
+          <Detail label="ClinVar" value="No clinical record" />
+        </div>
+      )}
+
+      {hasFreq ? (
+        <div className="mt-3 grid grid-cols-2 gap-3 border-t border-zinc-800 pt-3 text-sm">
+          <Detail label="gnomAD global AF" value={formatFreq(annotation.global_freq)} mono />
+          <div className="rounded-md border border-cyan-400/25 bg-cyan-400/10 px-3 py-1.5">
+            <p className="text-xs uppercase tracking-wide text-cyan-200/80">South-Asian AF</p>
+            <p className="mt-1 font-mono text-cyan-100">{formatFreq(annotation.south_asian_freq)}</p>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

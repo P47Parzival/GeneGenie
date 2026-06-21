@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 // Server-side proxy to the annotation backend. Keeps the API base URL off the
 // client and sidesteps CORS — the browser only ever talks to this Next route.
-const API_BASE = process.env.ANNOTATION_API_BASE ?? 'http://43.204.32.86:8000';
+const API_BASE = process.env.ANNOTATION_API_BASE ?? 'http://3.6.214.176:8000';
 
 export async function POST(request: Request) {
   let body: unknown;

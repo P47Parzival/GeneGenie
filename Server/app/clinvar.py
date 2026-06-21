@@ -43,11 +43,13 @@ def _parse_info(info: str) -> dict[str, str]:
 class ClinVarAnnotator:
     """Wraps a tabix-indexed ClinVar VCF for region-based annotation."""
 
-    def __init__(self, vcf_path: Path, tabix_bin: str = "tabix", dbsnp=None):
+    def __init__(self, vcf_path: Path, tabix_bin: str = "tabix", dbsnp=None, gnomad=None):
         self.vcf_path = Path(vcf_path)
         self.tabix_bin = tabix_bin
         # Optional DbSnpLookup for rsID enrichment when ClinVar has no match.
         self.dbsnp = dbsnp
+        # Optional GnomadLookup for population allele frequencies (AF, AF_sas).
+        self.gnomad = gnomad
 
     @property
     def available(self) -> bool:
@@ -98,6 +100,12 @@ class ClinVarAnnotator:
         # No ClinVar hit: still try to attach a dbSNP rsID if we have the subset.
         if not result.matched and not result.variant and self.dbsnp is not None:
             result.variant = self.dbsnp.rsid_for(chrom, q.pos, q.ref, q.alt)
+
+        # Attach gnomAD population frequencies (overall + South-Asian) when available.
+        if self.gnomad is not None:
+            result.global_freq, result.south_asian_freq = self.gnomad.frequencies(
+                chrom, q.pos, q.ref, q.alt
+            )
 
         return result
 

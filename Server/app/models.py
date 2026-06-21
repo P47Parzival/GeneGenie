@@ -27,6 +27,9 @@ class Annotation(BaseModel):
     disease: str | None = Field(default=None, description="ClinVar CLNDN")
     clinvar_id: str | None = None
     matched: bool = Field(default=False, description="True if found in ClinVar")
+    # gnomAD population allele frequencies (GRCh38). Differentiator: AF_sas.
+    global_freq: float | None = Field(default=None, description="gnomAD overall allele frequency (AF)")
+    south_asian_freq: float | None = Field(default=None, description="gnomAD South-Asian allele frequency (AF_sas)")
 
 
 class AnnotateResponse(BaseModel):
@@ -40,3 +43,4 @@ class HealthResponse(BaseModel):
     version: str
     clinvar_loaded: bool
     dbsnp_loaded: bool
+    gnomad_loaded: bool
