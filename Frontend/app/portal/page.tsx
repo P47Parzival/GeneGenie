@@ -4,11 +4,14 @@ import { Activity, AlertCircle, Binary, Database, FlaskConical, LayoutGrid, Load
 import { useEffect, useMemo, useState } from 'react';
 import SectionHeader from '../components/SectionHeader';
 
-interface ReferenceStatus {
-  clinvar: boolean;
-  dbsnp: boolean;
-  gnomad: boolean;
-  onekg: boolean;
+interface ReferenceDatasetInfo {
+  key: string;
+  label: string;
+  detail: string;
+  category: string;
+  source: string;
+  genome_wide: boolean;
+  loaded: boolean;
 }
 
 interface StatsMetrics {
@@ -37,7 +40,6 @@ interface RecentVariant {
 }
 
 interface StatsPayload {
-  references: ReferenceStatus;
   metrics: StatsMetrics;
   significance: SignificanceBucket[];
   recent: RecentVariant[];
@@ -45,23 +47,27 @@ interface StatsPayload {
 
 type LoadState = 'loading' | 'ready' | 'empty' | 'error';
 
-async function fetchStats(): Promise<StatsPayload> {
-  const res = await fetch('/api/stats', { cache: 'no-store' });
-  if (!res.ok) throw new Error('stats request failed');
-  return res.json();
-}
-
 export default function PortalPage() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [payload, setPayload] = useState<StatsPayload | null>(null);
+  const [datasets, setDatasets] = useState<ReferenceDatasetInfo[] | null>(null);
 
   useEffect(() => {
     let isMounted = true;
-    fetchStats()
-      .then((data) => {
+    Promise.all([
+      fetch('/api/stats', { cache: 'no-store' }).then((r) => {
+        if (!r.ok) throw new Error('stats request failed');
+        return r.json();
+      }),
+      fetch('/api/references', { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : { datasets: [] }))
+        .catch(() => ({ datasets: [] })),
+    ])
+      .then(([stats, refs]) => {
         if (!isMounted) return;
-        setPayload(data);
-        setLoadState(data.metrics.total_annotations > 0 ? 'ready' : 'empty');
+        setPayload(stats);
+        setDatasets(refs.datasets ?? []);
+        setLoadState(stats.metrics.total_annotations > 0 ? 'ready' : 'empty');
       })
       .catch(() => {
         if (!isMounted) return;
@@ -98,7 +104,7 @@ export default function PortalPage() {
         </div>
       </section>
 
-      <ReferencePanel references={payload?.references} loadState={loadState} />
+      <ReferencePanel datasets={datasets} loadState={loadState} />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {metricCards.map((metric) => {
@@ -176,42 +182,44 @@ export default function PortalPage() {
   );
 }
 
-function ReferencePanel({ references, loadState }: { references?: ReferenceStatus; loadState: LoadState }) {
-  const items = [
-    { key: 'clinvar' as const, label: 'ClinVar', detail: 'GRCh38 · full' },
-    { key: 'dbsnp' as const, label: 'dbSNP', detail: 'chr22 subset' },
-    { key: 'gnomad' as const, label: 'gnomAD', detail: 'exomes chr22 · AF_sas' },
-    { key: 'onekg' as const, label: '1000G', detail: 'SAS chr22 · SAS_AF' },
-  ];
+function ReferencePanel({ datasets, loadState }: { datasets: ReferenceDatasetInfo[] | null; loadState: LoadState }) {
+  if (loadState === 'loading') {
+    return (
+      <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <article key={i} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-6 w-16" />
+          </article>
+        ))}
+      </section>
+    );
+  }
+
+  if (!datasets?.length) return null;
+
   return (
     <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {items.map((item) => {
-        const loaded = references?.[item.key];
-        return (
-          <article key={item.key} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 backdrop-blur-md">
-            <div className="flex items-center gap-3">
-              <Database className="h-5 w-5 text-cyan-300" />
-              <div>
-                <p className="font-semibold text-white">{item.label}</p>
-                <p className="text-xs text-zinc-500">{item.detail}</p>
-              </div>
+      {datasets.map((d) => (
+        <article key={d.key} className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/50 p-4 backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <Database className="h-5 w-5 text-cyan-300" />
+            <div>
+              <p className="font-semibold text-white">{d.label}</p>
+              <p className="text-xs text-zinc-500">{d.detail}</p>
             </div>
-            {loadState === 'loading' ? (
-              <Skeleton className="h-6 w-16" />
-            ) : (
-              <span
-                className={`rounded-md border px-2.5 py-1 text-xs font-medium ${
-                  loaded
-                    ? 'border-emerald-400/40 bg-emerald-400/15 text-emerald-200'
-                    : 'border-zinc-700 bg-zinc-800/60 text-zinc-400'
-                }`}
-              >
-                {loaded ? 'Loaded' : 'Offline'}
-              </span>
-            )}
-          </article>
-        );
-      })}
+          </div>
+          <span
+            className={`rounded-md border px-2.5 py-1 text-xs font-medium ${
+              d.loaded
+                ? 'border-emerald-400/40 bg-emerald-400/15 text-emerald-200'
+                : 'border-zinc-700 bg-zinc-800/60 text-zinc-400'
+            }`}
+          >
+            {d.loaded ? 'Loaded' : 'Offline'}
+          </span>
+        </article>
+      ))}
     </section>
   );
 }

@@ -22,18 +22,21 @@ from .models import (
     Annotation,
     HealthResponse,
     PgxReport,
-    ReferenceStatus,
+    ReferenceDatasetInfo,
+    ReferencesResponse,
     StatsResponse,
     VariantQuery,
 )
 from .pgx import run_pgx
+from .registry import build_registry
 from .vcf_io import parse_vcf_genotypes, parse_vcf_text
 
 settings = get_settings()
-dbsnp = DbSnpLookup(settings.dbsnp_vcf)
-gnomad = GnomadLookup(settings.gnomad_vcf)
-onekg = OneKGenomesSAS(settings.onekg_vcf)
-annotator = ClinVarAnnotator(settings.clinvar_vcf, dbsnp=dbsnp, gnomad=gnomad, onekg=onekg)
+registry = build_registry(settings)
+dbsnp = DbSnpLookup(registry["dbsnp"])
+gnomad = GnomadLookup(registry["gnomad"])
+onekg = OneKGenomesSAS(registry["onekg"])
+annotator = ClinVarAnnotator(registry["clinvar"], dbsnp=dbsnp, gnomad=gnomad, onekg=onekg)
 
 app = FastAPI(title=settings.app_name, version=settings.app_version)
 
@@ -65,6 +68,24 @@ def health() -> HealthResponse:
     )
 
 
+@app.get("/references", response_model=ReferencesResponse)
+def references() -> ReferencesResponse:
+    return ReferencesResponse(
+        datasets=[
+            ReferenceDatasetInfo(
+                key=d.key,
+                label=d.label,
+                detail=d.detail,
+                category=d.category,
+                source=d.source,
+                genome_wide=d.genome_wide,
+                loaded=d.available(),
+            )
+            for d in registry.values()
+        ]
+    )
+
+
 @app.post("/pgx", response_model=PgxReport)
 async def pharmacogenomics(file: UploadFile = File(...)) -> PgxReport:
     raw = await file.read()
@@ -82,17 +103,7 @@ async def pharmacogenomics(file: UploadFile = File(...)) -> PgxReport:
 @app.get("/stats", response_model=StatsResponse)
 def stats() -> StatsResponse:
     metrics, significance, recent = get_stats()
-    return StatsResponse(
-        references=ReferenceStatus(
-            clinvar=annotator.available,
-            dbsnp=dbsnp.available,
-            gnomad=gnomad.available,
-            onekg=onekg.available,
-        ),
-        metrics=metrics,
-        significance=significance,
-        recent=recent,
-    )
+    return StatsResponse(metrics=metrics, significance=significance, recent=recent)
 
 
 @app.post("/annotate/variant", response_model=Annotation)

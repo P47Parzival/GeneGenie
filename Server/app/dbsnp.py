@@ -7,9 +7,7 @@ resolves. Only the subset chromosomes we actually downloaded will resolve.
 
 from __future__ import annotations
 
-import shutil
 import subprocess
-from pathlib import Path
 
 # GRCh38 primary assembly RefSeq accessions (extend as more dbSNP subsets land).
 GRCH38_REFSEQ: dict[str, str] = {
@@ -18,16 +16,14 @@ GRCH38_REFSEQ: dict[str, str] = {
 
 
 class DbSnpLookup:
-    def __init__(self, vcf_path: Path | None, tabix_bin: str = "tabix"):
-        self.vcf_path = Path(vcf_path) if vcf_path else None
+    def __init__(self, dataset, tabix_bin: str = "tabix"):
+        self.dataset = dataset
+        self.vcf_path = dataset.local_path if dataset else None
         self.tabix_bin = tabix_bin
 
     @property
     def available(self) -> bool:
-        if not self.vcf_path:
-            return False
-        index = self.vcf_path.with_suffix(self.vcf_path.suffix + ".tbi")
-        return self.vcf_path.exists() and index.exists() and shutil.which(self.tabix_bin) is not None
+        return bool(self.dataset and self.dataset.available())
 
     def rsid_for(self, chrom: str, pos: int, ref: str, alt: str) -> str | None:
         if not self.available:

@@ -89,11 +89,18 @@ class HealthResponse(BaseModel):
 
 # --- Portal dashboard stats -------------------------------------------------
 
-class ReferenceStatus(BaseModel):
-    clinvar: bool
-    dbsnp: bool
-    gnomad: bool
-    onekg: bool
+class ReferenceDatasetInfo(BaseModel):
+    key: str
+    label: str
+    detail: str
+    category: str
+    source: str
+    genome_wide: bool
+    loaded: bool
+
+
+class ReferencesResponse(BaseModel):
+    datasets: list[ReferenceDatasetInfo]
 
 
 class StatsMetrics(BaseModel):
@@ -122,7 +129,6 @@ class RecentVariant(BaseModel):
 
 
 class StatsResponse(BaseModel):
-    references: ReferenceStatus
     metrics: StatsMetrics
     significance: list[SignificanceBucket]
     recent: list[RecentVariant]

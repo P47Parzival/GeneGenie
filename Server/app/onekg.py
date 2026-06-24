@@ -7,9 +7,7 @@ independent South-Asian frequency source that cross-checks gnomAD's AF_sas.
 
 from __future__ import annotations
 
-import shutil
 import subprocess
-from pathlib import Path
 
 
 def _norm_chrom(chrom: str) -> str:
@@ -38,21 +36,17 @@ def _to_float(value: str | None) -> float | None:
 class OneKGenomesSAS:
     """Wraps a tabix-indexed 1000G sites VCF for SAS allele frequencies."""
 
-    COVERED_CONTIGS = {"22"}
-
-    def __init__(self, vcf_path: Path | None, tabix_bin: str = "tabix"):
-        self.vcf_path = Path(vcf_path) if vcf_path else None
+    def __init__(self, dataset, tabix_bin: str = "tabix"):
+        self.dataset = dataset
+        self.vcf_path = dataset.local_path if dataset else None
         self.tabix_bin = tabix_bin
 
     @property
     def available(self) -> bool:
-        if not self.vcf_path:
-            return False
-        index = self.vcf_path.with_suffix(self.vcf_path.suffix + ".tbi")
-        return self.vcf_path.exists() and index.exists() and shutil.which(self.tabix_bin) is not None
+        return bool(self.dataset and self.dataset.available())
 
     def covers(self, chrom: str) -> bool:
-        return _norm_chrom(chrom) in self.COVERED_CONTIGS
+        return bool(self.dataset and self.dataset.covers(chrom))
 
     def frequencies(self, chrom: str, pos: int, ref: str, alt: str) -> tuple[float | None, float | None]:
         """Return (global_af, sas_af) for the matching allele, or (None, None)."""

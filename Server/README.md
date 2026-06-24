@@ -31,6 +31,7 @@ app/
   gnomad.py         tabix-indexed gnomAD population frequencies (AF, AF_sas)
   onekg.py          tabix-indexed 1000G SAS frequencies (AF, SAS_AF)
   population.py     Indian population layer: SAS-vs-global comparison signal
+  registry.py       reference-data registry — single source of truth for datasets
   acmg.py           ACMG/AMP classification engine (PM2/BA1/BS1 + ClinVar evidence)
   pgx.py            pharmacogenomics engine (diplotype -> phenotype -> drug)
   pgx_data.py       curated CPIC knowledge base (GRCh38 coords verified via Ensembl)
@@ -65,8 +66,9 @@ Manage it: `sudo systemctl restart genegenie` · `journalctl -u genegenie -f`
 
 ## API
 
-- `GET  /health` — service status + whether ClinVar/dbSNP/gnomAD are loaded
-- `GET  /stats` — portal dashboard aggregates (annotations DB + reference status)
+- `GET  /health` — service status + whether ClinVar/dbSNP/gnomAD/1000G are loaded
+- `GET  /references` — reference-data registry: every dataset's metadata + loaded flag
+- `GET  /stats` — portal dashboard aggregates (annotations DB)
 - `POST /annotate/variant` — JSON `{chrom,pos,ref,alt}` -> annotation (incl. ACMG)
 - `POST /annotate` — multipart upload of a `.vcf` -> annotations (persisted)
 - `POST /pgx` — multipart `.vcf` -> pharmacogenomics report (diplotype/phenotype/drug)
@@ -121,6 +123,15 @@ classic interpretation trap — global-only rarity filters may over-call it; for
 South-Asian patient it is likely benign. The ACMG engine uses the best available
 South-Asian AF for BA1/BS1, and the evidence names the driving population
 (e.g. "Allele frequency 27% (South Asian) ≥ 5%").
+
+## Reference-data registry (`registry.py`)
+
+All reference datasets are declared once in `build_registry()` as
+`ReferenceDataset` entries (key, label, category, local path, S3 URI, chromosome
+coverage). Lookup classes take a dataset and derive `available()` / `covers()`
+from it — no per-class path or contig logic. `GET /references` exposes the
+registry (consumed dynamically by the `/portal` page), and adding a dataset is a
+single entry here plus its lookup/fetch script.
 
 ## Network access
 

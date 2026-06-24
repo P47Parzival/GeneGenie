@@ -13,9 +13,7 @@ ClinVar INFO fields we care about:
 
 from __future__ import annotations
 
-import shutil
 import subprocess
-from pathlib import Path
 
 from . import acmg, population
 from .models import Annotation, VariantQuery
@@ -44,8 +42,9 @@ def _parse_info(info: str) -> dict[str, str]:
 class ClinVarAnnotator:
     """Wraps a tabix-indexed ClinVar VCF for region-based annotation."""
 
-    def __init__(self, vcf_path: Path, tabix_bin: str = "tabix", dbsnp=None, gnomad=None, onekg=None):
-        self.vcf_path = Path(vcf_path)
+    def __init__(self, dataset, tabix_bin: str = "tabix", dbsnp=None, gnomad=None, onekg=None):
+        self.dataset = dataset
+        self.vcf_path = dataset.local_path if dataset else None
         self.tabix_bin = tabix_bin
         # Optional DbSnpLookup for rsID enrichment when ClinVar has no match.
         self.dbsnp = dbsnp
@@ -56,8 +55,7 @@ class ClinVarAnnotator:
 
     @property
     def available(self) -> bool:
-        index = self.vcf_path.with_suffix(self.vcf_path.suffix + ".tbi")
-        return self.vcf_path.exists() and index.exists() and shutil.which(self.tabix_bin) is not None
+        return bool(self.dataset and self.dataset.available())
 
     def _query_region(self, chrom: str, pos: int) -> list[list[str]]:
         region = f"{chrom}:{pos}-{pos}"
