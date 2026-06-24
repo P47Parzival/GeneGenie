@@ -61,30 +61,32 @@ def review_to_stars(review_status: str | None) -> int:
     return 0
 
 
-def _population_evidence(global_freq, sas_freq, gnomad_covers: bool) -> list[EvidenceItem]:
-    if not gnomad_covers:
-        return []  # we cannot speak to frequency outside the loaded subset
-    freqs = [f for f in (global_freq, sas_freq) if f is not None]
-    if not freqs:
+def _population_evidence(global_freq, sas_freq, covered: bool) -> list[EvidenceItem]:
+    if not covered:
+        return []  # we cannot speak to frequency outside the loaded subsets
+    # Common in ANY queried population leans benign; track which population drives it.
+    candidates = [(f, lbl) for f, lbl in ((global_freq, "global"), (sas_freq, "South Asian")) if f is not None]
+    if not candidates:
         return [
             EvidenceItem(
                 code="PM2_Supporting",
                 category="pathogenic",
                 strength=SUPPORTING,
-                description="Absent from gnomAD exomes (loaded subset)",
-                source="gnomAD",
+                description="Absent from population references (loaded subset)",
+                source="population",
             )
         ]
-    af = max(freqs)  # common in ANY queried population leans benign
+    af, which = max(candidates, key=lambda x: x[0])
+    pop = f" ({which})" if which == "South Asian" else ""
     if af >= BA1_AF:
         return [EvidenceItem(code="BA1", category="benign", strength=STAND_ALONE,
-                             description=f"Allele frequency {af:.3%} ≥ 5% in gnomAD", source="gnomAD")]
+                             description=f"Allele frequency {af:.3%}{pop} ≥ 5%", source="population")]
     if af >= BS1_AF:
         return [EvidenceItem(code="BS1", category="benign", strength=STRONG,
-                             description=f"Allele frequency {af:.3%} ≥ 1% in gnomAD", source="gnomAD")]
+                             description=f"Allele frequency {af:.3%}{pop} ≥ 1%", source="population")]
     if af < PM2_AF:
         return [EvidenceItem(code="PM2_Supporting", category="pathogenic", strength=SUPPORTING,
-                             description=f"Allele frequency {af:.4%} < 0.01% in gnomAD", source="gnomAD")]
+                             description=f"Allele frequency {af:.4%} < 0.01% in population references", source="population")]
     return []  # 0.01%–1%: no population criterion applies
 
 
@@ -164,13 +166,13 @@ def _clinvar_to_tier(significance: str | None) -> str | None:
 def classify(
     global_freq,
     sas_freq,
-    gnomad_covers: bool,
+    covered: bool,
     significance: str | None,
     review_status: str | None,
 ) -> tuple[str, str, list[EvidenceItem]]:
     """Return (classification, basis, evidence)."""
     stars = review_to_stars(review_status)
-    evidence = _population_evidence(global_freq, sas_freq, gnomad_covers)
+    evidence = _population_evidence(global_freq, sas_freq, covered)
     evidence += _clinvar_evidence(significance, stars)
 
     computed = _combine(evidence)

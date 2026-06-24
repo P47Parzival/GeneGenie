@@ -17,7 +17,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from . import acmg
+from . import acmg, population
 from .models import Annotation, VariantQuery
 
 
@@ -44,13 +44,15 @@ def _parse_info(info: str) -> dict[str, str]:
 class ClinVarAnnotator:
     """Wraps a tabix-indexed ClinVar VCF for region-based annotation."""
 
-    def __init__(self, vcf_path: Path, tabix_bin: str = "tabix", dbsnp=None, gnomad=None):
+    def __init__(self, vcf_path: Path, tabix_bin: str = "tabix", dbsnp=None, gnomad=None, onekg=None):
         self.vcf_path = Path(vcf_path)
         self.tabix_bin = tabix_bin
         # Optional DbSnpLookup for rsID enrichment when ClinVar has no match.
         self.dbsnp = dbsnp
         # Optional GnomadLookup for population allele frequencies (AF, AF_sas).
         self.gnomad = gnomad
+        # Optional OneKGenomesSAS for 1000G SAS frequencies (Week 6).
+        self.onekg = onekg
 
     @property
     def available(self) -> bool:
@@ -103,19 +105,27 @@ class ClinVarAnnotator:
         if not result.matched and not result.variant and self.dbsnp is not None:
             result.variant = self.dbsnp.rsid_for(chrom, q.pos, q.ref, q.alt)
 
-        # Attach gnomAD population frequencies (overall + South-Asian) when available.
-        gnomad_covers = False
+        # Population frequencies: gnomAD (AF, AF_sas) + 1000G (AF, SAS_AF).
+        gnomad_global = gnomad_sas = onekg_global = onekg_sas = None
+        covered = False
         if self.gnomad is not None:
-            result.global_freq, result.south_asian_freq = self.gnomad.frequencies(
-                chrom, q.pos, q.ref, q.alt
-            )
-            gnomad_covers = self.gnomad.available and self.gnomad.covers(chrom)
+            gnomad_global, gnomad_sas = self.gnomad.frequencies(chrom, q.pos, q.ref, q.alt)
+            covered = covered or (self.gnomad.available and self.gnomad.covers(chrom))
+        if self.onekg is not None:
+            onekg_global, onekg_sas = self.onekg.frequencies(chrom, q.pos, q.ref, q.alt)
+            covered = covered or (self.onekg.available and self.onekg.covers(chrom))
 
-        # ACMG classification from the evidence we can power (gnomAD AF + ClinVar).
+        # Build the Indian-population context and set combined headline frequencies.
+        result.population = population.build_context(gnomad_global, gnomad_sas, onekg_global, onekg_sas)
+        if result.population is not None:
+            result.global_freq = result.population.global_freq
+            result.south_asian_freq = result.population.south_asian_freq
+
+        # ACMG classification from the evidence we can power (population AF + ClinVar).
         result.acmg_classification, result.acmg_basis, result.acmg_evidence = acmg.classify(
             result.global_freq,
             result.south_asian_freq,
-            gnomad_covers,
+            covered,
             result.significance,
             result.review_status,
         )

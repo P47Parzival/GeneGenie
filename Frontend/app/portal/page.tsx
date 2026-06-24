@@ -8,6 +8,7 @@ interface ReferenceStatus {
   clinvar: boolean;
   dbsnp: boolean;
   gnomad: boolean;
+  onekg: boolean;
 }
 
 interface StatsMetrics {
@@ -180,9 +181,10 @@ function ReferencePanel({ references, loadState }: { references?: ReferenceStatu
     { key: 'clinvar' as const, label: 'ClinVar', detail: 'GRCh38 · full' },
     { key: 'dbsnp' as const, label: 'dbSNP', detail: 'chr22 subset' },
     { key: 'gnomad' as const, label: 'gnomAD', detail: 'exomes chr22 · AF_sas' },
+    { key: 'onekg' as const, label: '1000G', detail: 'SAS chr22 · SAS_AF' },
   ];
   return (
-    <section className="grid gap-4 md:grid-cols-3">
+    <section className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       {items.map((item) => {
         const loaded = references?.[item.key];
         return (

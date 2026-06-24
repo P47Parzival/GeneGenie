@@ -16,6 +16,7 @@ from .config import get_settings
 from .db import get_stats, init_db, save_annotations
 from .dbsnp import DbSnpLookup
 from .gnomad import GnomadLookup
+from .onekg import OneKGenomesSAS
 from .models import (
     AnnotateResponse,
     Annotation,
@@ -31,7 +32,8 @@ from .vcf_io import parse_vcf_genotypes, parse_vcf_text
 settings = get_settings()
 dbsnp = DbSnpLookup(settings.dbsnp_vcf)
 gnomad = GnomadLookup(settings.gnomad_vcf)
-annotator = ClinVarAnnotator(settings.clinvar_vcf, dbsnp=dbsnp, gnomad=gnomad)
+onekg = OneKGenomesSAS(settings.onekg_vcf)
+annotator = ClinVarAnnotator(settings.clinvar_vcf, dbsnp=dbsnp, gnomad=gnomad, onekg=onekg)
 
 app = FastAPI(title=settings.app_name, version=settings.app_version)
 
@@ -59,6 +61,7 @@ def health() -> HealthResponse:
         clinvar_loaded=annotator.available,
         dbsnp_loaded=dbsnp.available,
         gnomad_loaded=gnomad.available,
+        onekg_loaded=onekg.available,
     )
 
 
@@ -84,6 +87,7 @@ def stats() -> StatsResponse:
             clinvar=annotator.available,
             dbsnp=dbsnp.available,
             gnomad=gnomad.available,
+            onekg=onekg.available,
         ),
         metrics=metrics,
         significance=significance,

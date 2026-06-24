@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     # Optional gnomAD subset (e.g. exomes chr22) for population allele frequencies.
     gnomad_vcf: Path | None = Path("data/gnomad_exomes_chr22.vcf.bgz")
 
+    # Optional 1000 Genomes SAS subset (chr22) for South-Asian allele frequencies.
+    onekg_vcf: Path | None = Path("data/onekg_sas_chr22.vcf.gz")
+
     # --- AWS / S3 ------------------------------------------------------------
     s3_bucket: str = "indian-genomics-data"
     aws_region: str = "ap-south-1"

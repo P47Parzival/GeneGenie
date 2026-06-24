@@ -14,6 +14,27 @@ class VariantQuery(BaseModel):
     alt: str = Field(..., description="Alternate allele")
 
 
+class PopulationFrequencies(BaseModel):
+    """Allele frequencies from one population reference."""
+
+    source: str = Field(..., description="e.g. gnomAD (exomes), 1000G")
+    global_af: float | None = None
+    south_asian_af: float | None = None
+
+
+class PopulationContext(BaseModel):
+    """Combined South-Asian vs global frequency view across sources (Week 6)."""
+
+    global_freq: float | None = Field(default=None, description="Best available global AF")
+    south_asian_freq: float | None = Field(default=None, description="Best available South-Asian AF")
+    sources: list[PopulationFrequencies] = Field(default_factory=list)
+    comparison: str = Field(
+        default="insufficient-data",
+        description="population-enriched | population-depleted | concordant | insufficient-data",
+    )
+    note: str | None = Field(default=None, description="Plain-language interpretation of the SAS-vs-global signal")
+
+
 class EvidenceItem(BaseModel):
     """One applied ACMG/AMP criterion (or population/source-derived evidence)."""
 
@@ -41,6 +62,8 @@ class Annotation(BaseModel):
     # gnomAD population allele frequencies (GRCh38). Differentiator: AF_sas.
     global_freq: float | None = Field(default=None, description="gnomAD overall allele frequency (AF)")
     south_asian_freq: float | None = Field(default=None, description="gnomAD South-Asian allele frequency (AF_sas)")
+    # Indian population layer (Week 6): SAS-vs-global context across sources.
+    population: PopulationContext | None = None
     # ACMG classification (Week 3 engine).
     acmg_classification: str | None = Field(
         default=None, description="Pathogenic | Likely Pathogenic | Uncertain Significance | Likely Benign | Benign"
@@ -61,6 +84,7 @@ class HealthResponse(BaseModel):
     clinvar_loaded: bool
     dbsnp_loaded: bool
     gnomad_loaded: bool
+    onekg_loaded: bool
 
 
 # --- Portal dashboard stats -------------------------------------------------
@@ -69,6 +93,7 @@ class ReferenceStatus(BaseModel):
     clinvar: bool
     dbsnp: bool
     gnomad: bool
+    onekg: bool
 
 
 class StatsMetrics(BaseModel):

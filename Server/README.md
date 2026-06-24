@@ -15,6 +15,7 @@ S3 (warehouse)  ->  EC2 EBS (workbench)  ->  annotation  ->  results (SQLite -> 
   - `clinvar/clinvar.vcf.gz` (+ .tbi) — full ClinVar GRCh38
   - `dbsnp/dbsnp_chr22.vcf.gz` (+ .tbi) — dbSNP chr22 subset (~16.1M variants)
   - `gnomad/gnomad_exomes_chr22.vcf.bgz` (+ .tbi) — gnomAD v4.1 exomes chr22 (~4.8 GB), for AF / AF_sas
+  - `onekg/onekg_sas_chr22.vcf.gz` (+ .tbi) — 1000G chr22 sites-only (~12 MB), for AF / SAS_AF
 - **Service**: runs under systemd as `genegenie.service` on port 8000
 - S3 access via the instance IAM role `genomics-ec2-s3-role` (no keys on the box)
 - VCF region queries use the system `tabix` CLI (htslib) — no compiled Python
@@ -28,6 +29,8 @@ app/
   clinvar.py        tabix-indexed ClinVar lookup (+ dbSNP/gnomAD enrich, + ACMG)
   dbsnp.py          tabix-indexed dbSNP rsID lookup (RefSeq accession mapping)
   gnomad.py         tabix-indexed gnomAD population frequencies (AF, AF_sas)
+  onekg.py          tabix-indexed 1000G SAS frequencies (AF, SAS_AF)
+  population.py     Indian population layer: SAS-vs-global comparison signal
   acmg.py           ACMG/AMP classification engine (PM2/BA1/BS1 + ClinVar evidence)
   pgx.py            pharmacogenomics engine (diplotype -> phenotype -> drug)
   pgx_data.py       curated CPIC knowledge base (GRCh38 coords verified via Ensembl)
@@ -40,6 +43,7 @@ scripts/
   02_fetch_clinvar.sh       Step 4 — download ClinVar -> S3
   03_fetch_dbsnp_chr22.sh   Step 5 — dbSNP chr22 subset -> S3
   05_fetch_gnomad_chr22.sh  Step 8 — gnomAD exomes chr22 (AF_sas) -> S3
+  06_fetch_1000g_sas_chr22.sh  Week 6 — 1000G chr22 sites (SAS_AF) -> S3
   04_run_service.sh         pull ClinVar from S3 + run API (foreground)
 deploy/
   genegenie.service         systemd unit (production run)
@@ -104,6 +108,19 @@ Ensembl REST API. Honest simplifications: unphased genotypes, reference (*1)
 assumed where a defining variant is absent, no CNV/structural alleles. Zygosity
 is read from the VCF `GT` field (homozygous → 2 copies). Deferred: CYP2D6 (CNV),
 warfarin (CYP2C9+VKORC1 algorithm).
+
+### Indian population layer (`onekg.py`, `population.py`)
+
+Adds **1000 Genomes SAS** (South Asian) as a second, independent South-Asian
+frequency source alongside gnomAD `AF_sas`. `population.build_context` combines
+both and emits a `population` block on each annotation: best global &
+South-Asian AF, per-source breakdown, and a **comparison** flag
+(`population-enriched` / `population-depleted` / `concordant`) with a
+plain-language note. A variant rare globally but common in South Asians is the
+classic interpretation trap — global-only rarity filters may over-call it; for a
+South-Asian patient it is likely benign. The ACMG engine uses the best available
+South-Asian AF for BA1/BS1, and the evidence names the driving population
+(e.g. "Allele frequency 27% (South Asian) ≥ 5%").
 
 ## Network access
 

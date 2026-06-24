@@ -17,9 +17,31 @@ interface Annotation {
   matched: boolean;
   global_freq: number | null;
   south_asian_freq: number | null;
+  population: PopulationContext | null;
   acmg_classification: string | null;
   acmg_basis: string | null;
   acmg_evidence: EvidenceItem[];
+}
+
+interface PopulationFrequencies {
+  source: string;
+  global_af: number | null;
+  south_asian_af: number | null;
+}
+
+interface PopulationContext {
+  global_freq: number | null;
+  south_asian_freq: number | null;
+  sources: PopulationFrequencies[];
+  comparison: string;
+  note: string | null;
+}
+
+function comparisonTone(c: string): string {
+  if (c === 'population-enriched') return 'border-cyan-400/50 bg-cyan-400/20 text-cyan-100';
+  if (c === 'population-depleted') return 'border-purple-400/50 bg-purple-400/20 text-purple-100';
+  if (c === 'concordant') return 'border-zinc-600 bg-zinc-800/60 text-zinc-300';
+  return 'border-zinc-700 bg-zinc-800/40 text-zinc-500';
 }
 
 interface EvidenceItem {
@@ -215,8 +237,6 @@ function Field({ label, value, onChange, placeholder }: { label: string; value: 
 }
 
 function ResultCard({ annotation }: { annotation: Annotation }) {
-  const hasFreq = annotation.global_freq !== null || annotation.south_asian_freq !== null;
-
   return (
     <div className="mt-4 rounded-lg border border-zinc-800 bg-zinc-950/60 p-4">
       <div className="flex items-center justify-between gap-3">
@@ -242,15 +262,7 @@ function ResultCard({ annotation }: { annotation: Annotation }) {
         </div>
       )}
 
-      {hasFreq ? (
-        <div className="mt-3 grid grid-cols-2 gap-3 border-t border-zinc-800 pt-3 text-sm">
-          <Detail label="gnomAD global AF" value={formatFreq(annotation.global_freq)} mono />
-          <div className="rounded-md border border-cyan-400/25 bg-cyan-400/10 px-3 py-1.5">
-            <p className="text-xs uppercase tracking-wide text-cyan-200/80">South-Asian AF</p>
-            <p className="mt-1 font-mono text-cyan-100">{formatFreq(annotation.south_asian_freq)}</p>
-          </div>
-        </div>
-      ) : null}
+      {annotation.population ? <PopulationPanel population={annotation.population} /> : null}
 
       {annotation.acmg_classification ? (
         <div className="mt-3 border-t border-zinc-800 pt-3">
@@ -283,6 +295,44 @@ function ResultCard({ annotation }: { annotation: Annotation }) {
           ) : (
             <p className="mt-2 text-sm text-zinc-500">No ACMG criteria could be evidenced from loaded data.</p>
           )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function PopulationPanel({ population }: { population: PopulationContext }) {
+  const enriched = population.comparison === 'population-enriched';
+  return (
+    <div className="mt-3 border-t border-zinc-800 pt-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs uppercase tracking-wide text-zinc-500">Population frequency</p>
+        <span className={`rounded-md border px-2.5 py-1 text-xs font-medium ${comparisonTone(population.comparison)}`}>
+          {population.comparison.replace('-', ' ')}
+        </span>
+      </div>
+
+      <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+        <Detail label="Global AF" value={formatFreq(population.global_freq)} mono />
+        <div className={`rounded-md border px-3 py-1.5 ${enriched ? 'border-cyan-400/40 bg-cyan-400/15' : 'border-cyan-400/25 bg-cyan-400/10'}`}>
+          <p className="text-xs uppercase tracking-wide text-cyan-200/80">South-Asian AF</p>
+          <p className="mt-1 font-mono text-cyan-100">{formatFreq(population.south_asian_freq)}</p>
+        </div>
+      </div>
+
+      {population.note ? (
+        <p className={`mt-3 rounded-md border p-2.5 text-xs leading-5 ${enriched ? 'border-cyan-400/30 bg-cyan-400/10 text-cyan-100' : 'border-zinc-800 bg-zinc-950/50 text-zinc-400'}`}>
+          {population.note}
+        </p>
+      ) : null}
+
+      {population.sources.length ? (
+        <div className="mt-2 space-y-1">
+          {population.sources.map((s) => (
+            <p key={s.source} className="font-mono text-xs text-zinc-500">
+              {s.source}: global {formatFreq(s.global_af)} · SAS {formatFreq(s.south_asian_af)}
+            </p>
+          ))}
         </div>
       ) : null}
     </div>
