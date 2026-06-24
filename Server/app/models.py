@@ -14,8 +14,18 @@ class VariantQuery(BaseModel):
     alt: str = Field(..., description="Alternate allele")
 
 
+class EvidenceItem(BaseModel):
+    """One applied ACMG/AMP criterion (or population/source-derived evidence)."""
+
+    code: str = Field(..., description="ACMG criterion code, e.g. PM2_Supporting, BA1, BS1, PP5")
+    category: str = Field(..., description="'pathogenic' or 'benign'")
+    strength: str = Field(..., description="stand_alone | very_strong | strong | moderate | supporting")
+    description: str = Field(..., description="Human-readable basis for the criterion")
+    source: str = Field(..., description="Evidence source, e.g. gnomAD, ClinVar")
+
+
 class Annotation(BaseModel):
-    """ClinVar annotation for one variant. Shape mirrors the project spec."""
+    """ClinVar annotation for one variant, enriched with frequencies + ACMG call."""
 
     chrom: str
     pos: int
@@ -24,12 +34,19 @@ class Annotation(BaseModel):
     gene: str | None = None
     variant: str | None = Field(default=None, description="dbSNP rsID, e.g. rs80357713")
     significance: str | None = Field(default=None, description="ClinVar CLNSIG")
+    review_status: str | None = Field(default=None, description="ClinVar CLNREVSTAT")
     disease: str | None = Field(default=None, description="ClinVar CLNDN")
     clinvar_id: str | None = None
     matched: bool = Field(default=False, description="True if found in ClinVar")
     # gnomAD population allele frequencies (GRCh38). Differentiator: AF_sas.
     global_freq: float | None = Field(default=None, description="gnomAD overall allele frequency (AF)")
     south_asian_freq: float | None = Field(default=None, description="gnomAD South-Asian allele frequency (AF_sas)")
+    # ACMG classification (Week 3 engine).
+    acmg_classification: str | None = Field(
+        default=None, description="Pathogenic | Likely Pathogenic | Uncertain Significance | Likely Benign | Benign"
+    )
+    acmg_basis: str | None = Field(default=None, description="How the headline classification was derived")
+    acmg_evidence: list[EvidenceItem] = Field(default_factory=list)
 
 
 class AnnotateResponse(BaseModel):
@@ -84,3 +101,25 @@ class StatsResponse(BaseModel):
     metrics: StatsMetrics
     significance: list[SignificanceBucket]
     recent: list[RecentVariant]
+
+
+# --- Pharmacogenomics (Week 8) ----------------------------------------------
+
+class PgxDrugGuidance(BaseModel):
+    drug: str
+    recommendation: str
+    source: str = "CPIC"
+
+
+class PgxGeneResult(BaseModel):
+    gene: str
+    diplotype: str = Field(..., description="e.g. *1/*2")
+    phenotype: str = Field(..., description="e.g. Intermediate Metabolizer")
+    detected: list[str] = Field(default_factory=list, description="Detected non-reference alleles/variants")
+    drugs: list[PgxDrugGuidance] = Field(default_factory=list)
+
+
+class PgxReport(BaseModel):
+    genes_tested: list[str]
+    results: list[PgxGeneResult]
+    note: str

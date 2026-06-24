@@ -25,9 +25,12 @@ S3 (warehouse)  ->  EC2 EBS (workbench)  ->  annotation  ->  results (SQLite -> 
 ```
 app/
   main.py           routes: /health, /annotate, /annotate/variant
-  clinvar.py        tabix-indexed ClinVar lookup (+ dbSNP rsID fallback, + gnomAD freqs)
+  clinvar.py        tabix-indexed ClinVar lookup (+ dbSNP/gnomAD enrich, + ACMG)
   dbsnp.py          tabix-indexed dbSNP rsID lookup (RefSeq accession mapping)
   gnomad.py         tabix-indexed gnomAD population frequencies (AF, AF_sas)
+  acmg.py           ACMG/AMP classification engine (PM2/BA1/BS1 + ClinVar evidence)
+  pgx.py            pharmacogenomics engine (diplotype -> phenotype -> drug)
+  pgx_data.py       curated CPIC knowledge base (GRCh38 coords verified via Ensembl)
   vcf_io.py         user VCF parser
   db.py             results persistence (SQLite now, Postgres later)
   models.py         request/response schemas
@@ -58,9 +61,11 @@ Manage it: `sudo systemctl restart genegenie` · `journalctl -u genegenie -f`
 
 ## API
 
-- `GET  /health` — service status + whether ClinVar/dbSNP are loaded
-- `POST /annotate/variant` — JSON `{chrom,pos,ref,alt}` -> annotation
+- `GET  /health` — service status + whether ClinVar/dbSNP/gnomAD are loaded
+- `GET  /stats` — portal dashboard aggregates (annotations DB + reference status)
+- `POST /annotate/variant` — JSON `{chrom,pos,ref,alt}` -> annotation (incl. ACMG)
 - `POST /annotate` — multipart upload of a `.vcf` -> annotations (persisted)
+- `POST /pgx` — multipart `.vcf` -> pharmacogenomics report (diplotype/phenotype/drug)
 
 Example response:
 
@@ -73,6 +78,32 @@ If a variant isn't in ClinVar but falls in a loaded dbSNP subset (chr22), the
 response still carries its `variant` rsID with `matched: false`. When the variant
 falls in the loaded gnomAD subset (chr22), the response also carries
 `global_freq` (AF) and `south_asian_freq` (AF_sas).
+
+### ACMG classification (`acmg.py`)
+
+Every annotation includes an ACMG/AMP call: `acmg_classification` (5-tier),
+`acmg_basis` (how it was derived), and `acmg_evidence` (applied criteria).
+Only criteria we can honestly evidence today are implemented:
+
+- **PM2_Supporting** — rare/absent in gnomAD (ClinGen-downgraded to Supporting)
+- **BS1** — AF ≥ 1%; **BA1** — AF ≥ 5% (stand-alone benign)
+- **PP5 / BP6** — ClinVar asserts pathogenic/benign, strength scaled by review stars
+
+A reviewed ClinVar assertion (≥1★, non-conflicting) is used as the headline
+classification; otherwise the computed ACMG call stands. Because the criteria set
+is small, many novel variants resolve to *Uncertain Significance* — the correct,
+honest outcome. TODO: PP3/BP4 (REVEL/CADD/AlphaMissense), PVS1, PS1/PM5.
+
+### Pharmacogenomics (`pgx.py`, `pgx_data.py`)
+
+`POST /pgx` takes a VCF and returns per-gene star-allele diplotypes, CPIC
+metabolizer phenotypes, and drug guidance for a curated subset: **CYP2C19**
+(clopidogrel), **TPMT** (thiopurines), **DPYD** (fluoropyrimidines), **SLCO1B1**
+(statins). GRCh38 coordinates + forward-strand REF/ALT were verified via the
+Ensembl REST API. Honest simplifications: unphased genotypes, reference (*1)
+assumed where a defining variant is absent, no CNV/structural alleles. Zygosity
+is read from the VCF `GT` field (homozygous → 2 copies). Deferred: CYP2D6 (CNV),
+warfarin (CYP2C9+VKORC1 algorithm).
 
 ## Network access
 

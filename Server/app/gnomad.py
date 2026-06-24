@@ -46,6 +46,9 @@ class GnomadLookup:
         self.vcf_path = Path(vcf_path) if vcf_path else None
         self.tabix_bin = tabix_bin
 
+    # Chromosomes present in the loaded subset (currently chr22 only).
+    COVERED_CONTIGS = {"22"}
+
     @property
     def available(self) -> bool:
         if not self.vcf_path:
@@ -53,6 +56,10 @@ class GnomadLookup:
         # gnomAD ships .bgz with a .tbi index alongside.
         index = self.vcf_path.with_suffix(self.vcf_path.suffix + ".tbi")
         return self.vcf_path.exists() and index.exists() and shutil.which(self.tabix_bin) is not None
+
+    def covers(self, chrom: str) -> bool:
+        """Whether the loaded gnomAD subset includes this chromosome."""
+        return chrom.replace("chr", "") in self.COVERED_CONTIGS
 
     def frequencies(self, chrom: str, pos: int, ref: str, alt: str) -> tuple[float | None, float | None]:
         """Return (global_freq, south_asian_freq) for the matching allele, or (None, None)."""

@@ -17,6 +17,27 @@ interface Annotation {
   matched: boolean;
   global_freq: number | null;
   south_asian_freq: number | null;
+  acmg_classification: string | null;
+  acmg_basis: string | null;
+  acmg_evidence: EvidenceItem[];
+}
+
+interface EvidenceItem {
+  code: string;
+  category: string;
+  strength: string;
+  description: string;
+  source: string;
+}
+
+function acmgTone(cls: string | null): string {
+  if (!cls) return 'border-zinc-700 bg-zinc-800/60 text-zinc-300';
+  const s = cls.toLowerCase();
+  if (s === 'pathogenic') return 'border-red-400/50 bg-red-400/20 text-red-100';
+  if (s === 'likely pathogenic') return 'border-orange-400/50 bg-orange-400/20 text-orange-100';
+  if (s === 'benign') return 'border-emerald-400/50 bg-emerald-400/20 text-emerald-100';
+  if (s === 'likely benign') return 'border-teal-400/50 bg-teal-400/20 text-teal-100';
+  return 'border-amber-400/40 bg-amber-400/15 text-amber-200'; // VUS
 }
 
 function formatFreq(f: number | null): string {
@@ -228,6 +249,40 @@ function ResultCard({ annotation }: { annotation: Annotation }) {
             <p className="text-xs uppercase tracking-wide text-cyan-200/80">South-Asian AF</p>
             <p className="mt-1 font-mono text-cyan-100">{formatFreq(annotation.south_asian_freq)}</p>
           </div>
+        </div>
+      ) : null}
+
+      {annotation.acmg_classification ? (
+        <div className="mt-3 border-t border-zinc-800 pt-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-zinc-500">ACMG classification</p>
+              <p className="mt-0.5 text-xs text-zinc-500">{annotation.acmg_basis}</p>
+            </div>
+            <span className={`rounded-md border px-2.5 py-1 text-sm font-semibold ${acmgTone(annotation.acmg_classification)}`}>
+              {annotation.acmg_classification}
+            </span>
+          </div>
+          {annotation.acmg_evidence.length ? (
+            <ul className="mt-3 space-y-1.5">
+              {annotation.acmg_evidence.map((e) => (
+                <li key={e.code} className="flex items-start gap-2 text-sm">
+                  <span
+                    className={`mt-0.5 rounded px-1.5 py-0.5 font-mono text-xs ${
+                      e.category === 'pathogenic'
+                        ? 'bg-red-400/15 text-red-200'
+                        : 'bg-emerald-400/15 text-emerald-200'
+                    }`}
+                  >
+                    {e.code}
+                  </span>
+                  <span className="text-zinc-300">{e.description}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-2 text-sm text-zinc-500">No ACMG criteria could be evidenced from loaded data.</p>
+          )}
         </div>
       ) : null}
     </div>

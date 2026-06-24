@@ -9,6 +9,7 @@ const links = [
   { label: 'Platform', href: '/platform' },
   { label: 'Applications', href: '/applications' },
   { label: 'Annotate', href: '/annotate' },
+  { label: 'PGx', href: '/pgx' },
 ];
 
 export default function Navbar() {

@@ -20,11 +20,13 @@ from .models import (
     AnnotateResponse,
     Annotation,
     HealthResponse,
+    PgxReport,
     ReferenceStatus,
     StatsResponse,
     VariantQuery,
 )
-from .vcf_io import parse_vcf_text
+from .pgx import run_pgx
+from .vcf_io import parse_vcf_genotypes, parse_vcf_text
 
 settings = get_settings()
 dbsnp = DbSnpLookup(settings.dbsnp_vcf)
@@ -58,6 +60,20 @@ def health() -> HealthResponse:
         dbsnp_loaded=dbsnp.available,
         gnomad_loaded=gnomad.available,
     )
+
+
+@app.post("/pgx", response_model=PgxReport)
+async def pharmacogenomics(file: UploadFile = File(...)) -> PgxReport:
+    raw = await file.read()
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="Upload must be an uncompressed text VCF")
+
+    genotypes, had_gt = parse_vcf_genotypes(text)
+    if not genotypes:
+        raise HTTPException(status_code=400, detail="No valid variant records found in VCF")
+    return run_pgx(genotypes, had_gt)
 
 
 @app.get("/stats", response_model=StatsResponse)

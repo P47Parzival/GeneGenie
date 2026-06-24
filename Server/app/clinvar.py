@@ -17,6 +17,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from . import acmg
 from .models import Annotation, VariantQuery
 
 
@@ -92,6 +93,7 @@ class ClinVarAnnotator:
             result.gene = geneinfo.split(":")[0] if geneinfo else None
             result.variant = f"rs{rs}" if rs else None
             result.significance = info.get("CLNSIG")
+            result.review_status = info.get("CLNREVSTAT")
             result.disease = disease.replace("_", " ").split("|")[0] if disease else None
             result.clinvar_id = rec_id if rec_id != "." else None
             result.matched = True
@@ -102,10 +104,21 @@ class ClinVarAnnotator:
             result.variant = self.dbsnp.rsid_for(chrom, q.pos, q.ref, q.alt)
 
         # Attach gnomAD population frequencies (overall + South-Asian) when available.
+        gnomad_covers = False
         if self.gnomad is not None:
             result.global_freq, result.south_asian_freq = self.gnomad.frequencies(
                 chrom, q.pos, q.ref, q.alt
             )
+            gnomad_covers = self.gnomad.available and self.gnomad.covers(chrom)
+
+        # ACMG classification from the evidence we can power (gnomAD AF + ClinVar).
+        result.acmg_classification, result.acmg_basis, result.acmg_evidence = acmg.classify(
+            result.global_freq,
+            result.south_asian_freq,
+            gnomad_covers,
+            result.significance,
+            result.review_status,
+        )
 
         return result
 
