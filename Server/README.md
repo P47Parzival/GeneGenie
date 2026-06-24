@@ -38,6 +38,8 @@ app/
   acmg.py           ACMG/AMP classification engine (PM2/BA1/BS1 + ClinVar evidence)
   pgx.py            pharmacogenomics engine (diplotype -> phenotype -> drug)
   pgx_data.py       curated CPIC knowledge base (GRCh38 coords verified via Ensembl)
+  prs.py            polygenic risk engine (weighted sum -> SAS-calibrated percentile)
+  prs_data.py       illustrative T2D model (Ensembl-verified coords + SAS freqs)
   vcf_io.py         user VCF parser
   db.py             results persistence (SQLite now, Postgres later)
   models.py         request/response schemas
@@ -77,6 +79,7 @@ Manage it: `sudo systemctl restart genegenie` · `journalctl -u genegenie -f`
 - `POST /annotate/variant` — JSON `{chrom,pos,ref,alt}` -> annotation (incl. ACMG)
 - `POST /annotate` — multipart upload of a `.vcf` -> annotations (persisted)
 - `POST /pgx` — multipart `.vcf` -> pharmacogenomics report (diplotype/phenotype/drug)
+- `POST /prs` — multipart `.vcf` -> polygenic risk scores (percentile vs SAS reference)
 
 Example response:
 
@@ -128,6 +131,18 @@ classic interpretation trap — global-only rarity filters may over-call it; for
 South-Asian patient it is likely benign. The ACMG engine uses the best available
 South-Asian AF for BA1/BS1, and the evidence names the driving population
 (e.g. "Allele frequency 27% (South Asian) ≥ 5%").
+
+### Polygenic risk scores (`prs.py`, `prs_data.py`)
+
+`POST /prs` takes a VCF and returns polygenic risk per trait: effect-allele
+dosage × weight summed across the model, then a **percentile against a
+South-Asian reference distribution** computed analytically from 1000G SAS allele
+frequencies (Hardy-Weinberg + linkage-equilibrium normal approximation) — *not* a
+European-derived reference. Reports `variants_observed/variants_total` coverage.
+The bundled **Type 2 Diabetes** model is illustrative/educational (10 established
+GWAS loci; GRCh38 coords, alleles, and SAS frequencies verified via Ensembl;
+effect weights = ln OR from literature) — **not a clinical PGS**. Honest limits:
+LD is not modelled (variance approximate); absent sites assumed homozygous ref.
 
 ### Gene knowledge graph (`build_kg.py`, `knowledge.py`)
 

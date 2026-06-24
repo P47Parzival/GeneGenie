@@ -24,12 +24,14 @@ from .models import (
     HealthResponse,
     GeneNode,
     PgxReport,
+    PrsResponse,
     ReferenceDatasetInfo,
     ReferencesResponse,
     StatsResponse,
     VariantQuery,
 )
 from .pgx import run_pgx
+from .prs import run_prs
 from .registry import build_registry
 from .vcf_io import parse_vcf_genotypes, parse_vcf_text
 
@@ -112,6 +114,18 @@ async def pharmacogenomics(file: UploadFile = File(...)) -> PgxReport:
     if not genotypes:
         raise HTTPException(status_code=400, detail="No valid variant records found in VCF")
     return run_pgx(genotypes, had_gt)
+
+
+@app.post("/prs", response_model=PrsResponse)
+async def polygenic_risk(file: UploadFile = File(...)) -> PrsResponse:
+    raw = await file.read()
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="Upload must be an uncompressed text VCF")
+
+    genotypes, _had_gt = parse_vcf_genotypes(text)
+    return run_prs(genotypes)
 
 
 @app.get("/stats", response_model=StatsResponse)

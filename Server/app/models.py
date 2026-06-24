@@ -176,6 +176,25 @@ class GeneVariantStats(BaseModel):
     total: int = 0
 
 
+class PrsTraitResult(BaseModel):
+    trait: str
+    model_id: str
+    ancestry: str
+    raw_score: float
+    reference_mean: float
+    reference_sd: float
+    z_score: float
+    percentile: float = Field(..., description="Percentile vs the ancestry-matched reference (0-100)")
+    risk_band: str
+    variants_total: int
+    variants_observed: int = Field(..., description="How many model variants were directly genotyped in the VCF")
+
+
+class PrsResponse(BaseModel):
+    results: list[PrsTraitResult]
+    note: str
+
+
 class GeneNode(BaseModel):
     symbol: str
     ncbi_id: str | None = None
