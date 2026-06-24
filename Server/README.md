@@ -16,6 +16,7 @@ S3 (warehouse)  ->  EC2 EBS (workbench)  ->  annotation  ->  results (SQLite -> 
   - `dbsnp/dbsnp_chr22.vcf.gz` (+ .tbi) — dbSNP chr22 subset (~16.1M variants)
   - `gnomad/gnomad_exomes_chr22.vcf.bgz` (+ .tbi) — gnomAD v4.1 exomes chr22 (~4.8 GB), for AF / AF_sas
   - `onekg/onekg_sas_chr22.vcf.gz` (+ .tbi) — 1000G chr22 sites-only (~12 MB), for AF / SAS_AF
+  - `knowledge/knowledge_graph.json` — gene KG index (~8 MB, ~19k genes)
 - **Service**: runs under systemd as `genegenie.service` on port 8000
 - S3 access via the instance IAM role `genomics-ec2-s3-role` (no keys on the box)
 - VCF region queries use the system `tabix` CLI (htslib) — no compiled Python
@@ -32,6 +33,8 @@ app/
   onekg.py          tabix-indexed 1000G SAS frequencies (AF, SAS_AF)
   population.py     Indian population layer: SAS-vs-global comparison signal
   registry.py       reference-data registry — single source of truth for datasets
+  knowledge.py      gene knowledge-graph lookup (loads knowledge_graph.json)
+  build_kg.py       offline builder: ClinVar + Reactome -> knowledge_graph.json
   acmg.py           ACMG/AMP classification engine (PM2/BA1/BS1 + ClinVar evidence)
   pgx.py            pharmacogenomics engine (diplotype -> phenotype -> drug)
   pgx_data.py       curated CPIC knowledge base (GRCh38 coords verified via Ensembl)
@@ -45,6 +48,7 @@ scripts/
   03_fetch_dbsnp_chr22.sh   Step 5 — dbSNP chr22 subset -> S3
   05_fetch_gnomad_chr22.sh  Step 8 — gnomAD exomes chr22 (AF_sas) -> S3
   06_fetch_1000g_sas_chr22.sh  Week 6 — 1000G chr22 sites (SAS_AF) -> S3
+  07_build_knowledge_graph.sh  Week 4 — build gene KG (ClinVar+Reactome) -> S3
   04_run_service.sh         pull ClinVar from S3 + run API (foreground)
 deploy/
   genegenie.service         systemd unit (production run)
@@ -68,6 +72,7 @@ Manage it: `sudo systemctl restart genegenie` · `journalctl -u genegenie -f`
 
 - `GET  /health` — service status + whether ClinVar/dbSNP/gnomAD/1000G are loaded
 - `GET  /references` — reference-data registry: every dataset's metadata + loaded flag
+- `GET  /gene/{symbol}` — knowledge-graph node: diseases, drugs, pathways, variant stats
 - `GET  /stats` — portal dashboard aggregates (annotations DB)
 - `POST /annotate/variant` — JSON `{chrom,pos,ref,alt}` -> annotation (incl. ACMG)
 - `POST /annotate` — multipart upload of a `.vcf` -> annotations (persisted)
@@ -123,6 +128,18 @@ classic interpretation trap — global-only rarity filters may over-call it; for
 South-Asian patient it is likely benign. The ACMG engine uses the best available
 South-Asian AF for BA1/BS1, and the evidence names the driving population
 (e.g. "Allele frequency 27% (South Asian) ≥ 5%").
+
+### Gene knowledge graph (`build_kg.py`, `knowledge.py`)
+
+`GET /gene/{symbol}` returns a gene node linking **Variant → Gene → Disease →
+Drug → Pathway**. The index (`knowledge_graph.json`, ~19k genes) is built offline
+by `app.build_kg` from license-clean sources:
+- **ClinVar** (public domain): gene → diseases (from pathogenic variants) + per-significance variant stats
+- **Reactome** `NCBI2Reactome` (CC-BY 4.0): gene → pathway names
+- Curated **CPIC/PharmGKB** gene → drug associations (public)
+
+It is genome-wide (e.g. BRCA1 on chr17 works). Deferred for licensing: **OMIM**,
+**DisGeNET** (restrictive/commercial terms) — add as opt-in later.
 
 ## Reference-data registry (`registry.py`)
 

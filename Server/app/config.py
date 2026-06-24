@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     # Optional 1000 Genomes SAS subset (chr22) for South-Asian allele frequencies.
     onekg_vcf: Path | None = Path("data/onekg_sas_chr22.vcf.gz")
 
+    # Optional gene knowledge-graph index (built by app.build_kg).
+    kg_path: Path | None = Path("data/knowledge_graph.json")
+
     # --- AWS / S3 ------------------------------------------------------------
     s3_bucket: str = "indian-genomics-data"
     aws_region: str = "ap-south-1"

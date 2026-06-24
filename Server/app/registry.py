@@ -76,5 +76,11 @@ def build_registry(settings: Settings | None = None) -> dict[str, ReferenceDatas
             local_path=s.onekg_vcf, s3_uri=f"{bucket}/onekg/onekg_sas_chr22.vcf.gz",
             contigs=frozenset({"22"}),
         ),
+        ReferenceDataset(
+            key="knowledge", label="Knowledge Graph", detail="gene → disease/drug/pathway",
+            category="knowledge", source="ClinVar + Reactome + CPIC/PharmGKB",
+            local_path=s.kg_path, s3_uri=f"{bucket}/knowledge/knowledge_graph.json",
+            requires_index=False, contigs=None,
+        ),
     ]
     return {d.key: d for d in datasets}

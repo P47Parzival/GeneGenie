@@ -154,3 +154,32 @@ class PgxReport(BaseModel):
     genes_tested: list[str]
     results: list[PgxGeneResult]
     note: str
+
+
+# --- Gene knowledge graph (Week 4) ------------------------------------------
+
+class DiseaseAssociation(BaseModel):
+    name: str
+    count: int = Field(..., description="Number of pathogenic ClinVar variants linking gene to disease")
+
+
+class DrugAssociation(BaseModel):
+    drug: str
+    effect: str
+
+
+class GeneVariantStats(BaseModel):
+    pathogenic: int = 0
+    benign: int = 0
+    uncertain: int = 0
+    conflicting: int = 0
+    total: int = 0
+
+
+class GeneNode(BaseModel):
+    symbol: str
+    ncbi_id: str | None = None
+    diseases: list[DiseaseAssociation] = Field(default_factory=list)
+    drugs: list[DrugAssociation] = Field(default_factory=list)
+    pathways: list[str] = Field(default_factory=list)
+    variant_stats: GeneVariantStats = Field(default_factory=GeneVariantStats)
