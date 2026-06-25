@@ -18,6 +18,7 @@ from .dbsnp import DbSnpLookup
 from .gnomad import GnomadLookup
 from .knowledge import KnowledgeGraph
 from .onekg import OneKGenomesSAS
+from .revel import RevelLookup
 from .models import (
     AnnotateResponse,
     Annotation,
@@ -41,7 +42,8 @@ registry = build_registry(settings)
 dbsnp = DbSnpLookup(registry["dbsnp"])
 gnomad = GnomadLookup(registry["gnomad"])
 onekg = OneKGenomesSAS(registry["onekg"])
-annotator = ClinVarAnnotator(registry["clinvar"], dbsnp=dbsnp, gnomad=gnomad, onekg=onekg)
+revel = RevelLookup(registry["revel"])
+annotator = ClinVarAnnotator(registry["clinvar"], dbsnp=dbsnp, gnomad=gnomad, onekg=onekg, revel=revel)
 knowledge = KnowledgeGraph(settings.kg_path)
 
 app = FastAPI(title=settings.app_name, version=settings.app_version)
@@ -72,6 +74,7 @@ def health() -> HealthResponse:
         dbsnp_loaded=dbsnp.available,
         gnomad_loaded=gnomad.available,
         onekg_loaded=onekg.available,
+        revel_loaded=revel.available,
     )
 
 

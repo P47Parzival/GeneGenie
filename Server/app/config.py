@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     # Optional gene knowledge-graph index (built by app.build_kg).
     kg_path: Path | None = Path("data/knowledge_graph.json")
 
+    # Optional REVEL missense predictor subset (chr22) for ACMG PP3/BP4.
+    revel_path: Path | None = Path("data/revel_chr22.tsv.gz")
+
     # --- AWS / S3 ------------------------------------------------------------
     s3_bucket: str = "indian-genomics-data"
     aws_region: str = "ap-south-1"

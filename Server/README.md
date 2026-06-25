@@ -17,6 +17,7 @@ S3 (warehouse)  ->  EC2 EBS (workbench)  ->  annotation  ->  results (SQLite -> 
   - `gnomad/gnomad_exomes_chr22.vcf.bgz` (+ .tbi) — gnomAD v4.1 exomes chr22 (~4.8 GB), for AF / AF_sas
   - `onekg/onekg_sas_chr22.vcf.gz` (+ .tbi) — 1000G chr22 sites-only (~12 MB), for AF / SAS_AF
   - `knowledge/knowledge_graph.json` — gene KG index (~8 MB, ~19k genes)
+  - `revel/revel_chr22.tsv.gz` (+ .tbi) — REVEL chr22 missense scores (~7 MB, ~1.78M)
 - **Service**: runs under systemd as `genegenie.service` on port 8000
 - S3 access via the instance IAM role `genomics-ec2-s3-role` (no keys on the box)
 - VCF region queries use the system `tabix` CLI (htslib) — no compiled Python
@@ -35,7 +36,8 @@ app/
   registry.py       reference-data registry — single source of truth for datasets
   knowledge.py      gene knowledge-graph lookup (loads knowledge_graph.json)
   build_kg.py       offline builder: ClinVar + Reactome -> knowledge_graph.json
-  acmg.py           ACMG/AMP classification engine (PM2/BA1/BS1 + ClinVar evidence)
+  revel.py          REVEL in-silico missense scores (ACMG PP3/BP4)
+  acmg.py           ACMG/AMP classification engine (PM2/BA1/BS1 + ClinVar + PP3/BP4)
   pgx.py            pharmacogenomics engine (diplotype -> phenotype -> drug)
   pgx_data.py       curated CPIC knowledge base (GRCh38 coords verified via Ensembl)
   prs.py            polygenic risk engine (weighted sum -> SAS-calibrated percentile)
@@ -104,11 +106,14 @@ Only criteria we can honestly evidence today are implemented:
 - **PM2_Supporting** — rare/absent in gnomAD (ClinGen-downgraded to Supporting)
 - **BS1** — AF ≥ 1%; **BA1** — AF ≥ 5% (stand-alone benign)
 - **PP5 / BP6** — ClinVar asserts pathogenic/benign, strength scaled by review stars
+- **PP3 / BP4** — REVEL in-silico missense score, ClinGen SVI-calibrated strengths
+  (PP3: ≥0.644 supporting / ≥0.773 moderate / ≥0.932 strong; BP4: ≤0.290 supporting / ≤0.016 strong)
 
 A reviewed ClinVar assertion (≥1★, non-conflicting) is used as the headline
 classification; otherwise the computed ACMG call stands. Because the criteria set
 is small, many novel variants resolve to *Uncertain Significance* — the correct,
-honest outcome. TODO: PP3/BP4 (REVEL/CADD/AlphaMissense), PVS1, PS1/PM5.
+honest outcome. TODO: PVS1, PS1/PM5, functional (PS3/BS3). Predictor is REVEL
+(missense, chr22 subset); CADD/AlphaMissense deferred (non-commercial licenses).
 
 ### Pharmacogenomics (`pgx.py`, `pgx_data.py`)
 

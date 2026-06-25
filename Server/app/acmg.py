@@ -7,10 +7,10 @@ from the data we have loaded (gnomAD allele frequencies + ClinVar assertions):
   - BS1            : AF >= 1%  (too common for most Mendelian disease)
   - BA1            : AF >= 5%  (stand-alone benign)
   - PP5 / BP6      : ClinVar asserts pathogenic/benign (strength scaled by review stars)
+  - PP3 / BP4      : in-silico predictor (REVEL), ClinGen-calibrated strengths
 
 NOT yet implemented (need data we haven't added):
-  - PVS1 (LoF + gene mechanism), PS1/PM5 (protein-level), PP3/BP4 (in-silico
-    predictors like REVEL/CADD/AlphaMissense), PS3/BS3 (functional), PM1, etc.
+  - PVS1 (LoF + gene mechanism), PS1/PM5 (protein-level), PS3/BS3 (functional), PM1, etc.
 
 Criteria are combined with the ACMG 2015 (Richards et al.) rules. Because our
 criteria set is small, most novel variants resolve to Uncertain Significance —
@@ -41,6 +41,34 @@ BENIGN = "Benign"
 BA1_AF = 0.05
 BS1_AF = 0.01
 PM2_AF = 0.0001
+
+# REVEL thresholds — ClinGen SVI calibrated (Pejaver et al. 2022).
+REVEL_PP3_STRONG = 0.932
+REVEL_PP3_MODERATE = 0.773
+REVEL_PP3_SUPPORTING = 0.644
+REVEL_BP4_STRONG = 0.016
+REVEL_BP4_SUPPORTING = 0.290
+
+
+def _predictor_evidence(revel: float | None) -> list[EvidenceItem]:
+    if revel is None:
+        return []
+    if revel >= REVEL_PP3_STRONG:
+        return [EvidenceItem(code="PP3_Strong", category="pathogenic", strength=STRONG,
+                             description=f"REVEL {revel:.3f} — strong in-silico support for damage", source="REVEL")]
+    if revel >= REVEL_PP3_MODERATE:
+        return [EvidenceItem(code="PP3_Moderate", category="pathogenic", strength=MODERATE,
+                             description=f"REVEL {revel:.3f} — moderate in-silico support for damage", source="REVEL")]
+    if revel >= REVEL_PP3_SUPPORTING:
+        return [EvidenceItem(code="PP3", category="pathogenic", strength=SUPPORTING,
+                             description=f"REVEL {revel:.3f} — supporting in-silico evidence for damage", source="REVEL")]
+    if revel <= REVEL_BP4_STRONG:
+        return [EvidenceItem(code="BP4_Strong", category="benign", strength=STRONG,
+                             description=f"REVEL {revel:.3f} — strong in-silico support for tolerance", source="REVEL")]
+    if revel <= REVEL_BP4_SUPPORTING:
+        return [EvidenceItem(code="BP4", category="benign", strength=SUPPORTING,
+                             description=f"REVEL {revel:.3f} — supporting in-silico evidence for tolerance", source="REVEL")]
+    return []  # 0.290–0.644: indeterminate, no criterion
 
 
 def review_to_stars(review_status: str | None) -> int:
@@ -169,11 +197,13 @@ def classify(
     covered: bool,
     significance: str | None,
     review_status: str | None,
+    revel_score: float | None = None,
 ) -> tuple[str, str, list[EvidenceItem]]:
     """Return (classification, basis, evidence)."""
     stars = review_to_stars(review_status)
     evidence = _population_evidence(global_freq, sas_freq, covered)
     evidence += _clinvar_evidence(significance, stars)
+    evidence += _predictor_evidence(revel_score)
 
     computed = _combine(evidence)
 

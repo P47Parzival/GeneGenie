@@ -60,13 +60,15 @@ def _priority(result: Annotation) -> int:
         score += 10
     elif sas is None:
         score += 5
+    if result.revel_score is not None and result.revel_score >= 0.644:
+        score += 15  # in-silico predicted damaging — worth a look
     return score
 
 
 class ClinVarAnnotator:
     """Wraps a tabix-indexed ClinVar VCF for region-based annotation."""
 
-    def __init__(self, dataset, tabix_bin: str = "tabix", dbsnp=None, gnomad=None, onekg=None):
+    def __init__(self, dataset, tabix_bin: str = "tabix", dbsnp=None, gnomad=None, onekg=None, revel=None):
         self.dataset = dataset
         self.vcf_path = dataset.local_path if dataset else None
         self.tabix_bin = tabix_bin
@@ -76,6 +78,8 @@ class ClinVarAnnotator:
         self.gnomad = gnomad
         # Optional OneKGenomesSAS for 1000G SAS frequencies (Week 6).
         self.onekg = onekg
+        # Optional RevelLookup for in-silico PP3/BP4 evidence.
+        self.revel = revel
 
     @property
     def available(self) -> bool:
@@ -105,8 +109,10 @@ class ClinVarAnnotator:
         dbsnp_rsid: str | None,
         gnomad_covered: bool,
         onekg_covered: bool,
+        revel_score: float | None = None,
     ) -> Annotation:
         result = Annotation(chrom=chrom, pos=q.pos, ref=q.ref, alt=q.alt)
+        result.revel_score = revel_score
 
         for cols in clinvar_rows:
             if len(cols) < 8:
@@ -143,6 +149,7 @@ class ClinVarAnnotator:
             gnomad_covered or onekg_covered,
             result.significance,
             result.review_status,
+            revel_score,
         )
         result.priority = _priority(result)
         return result
@@ -153,9 +160,10 @@ class ClinVarAnnotator:
         dbsnp_rsid = self.dbsnp.rsid_for(chrom, q.pos, q.ref, q.alt) if self.dbsnp else None
         gnomad_freqs = self.gnomad.frequencies(chrom, q.pos, q.ref, q.alt) if self.gnomad else (None, None)
         onekg_freqs = self.onekg.frequencies(chrom, q.pos, q.ref, q.alt) if self.onekg else (None, None)
+        revel_score = self.revel.score(chrom, q.pos, q.ref, q.alt) if self.revel else None
         gnomad_cov = bool(self.gnomad and self.gnomad.available and self.gnomad.covers(chrom))
         onekg_cov = bool(self.onekg and self.onekg.available and self.onekg.covers(chrom))
-        return self._assemble(q, chrom, clinvar_rows, gnomad_freqs, onekg_freqs, dbsnp_rsid, gnomad_cov, onekg_cov)
+        return self._assemble(q, chrom, clinvar_rows, gnomad_freqs, onekg_freqs, dbsnp_rsid, gnomad_cov, onekg_cov, revel_score)
 
     def _bulk_clinvar(self, positions: set[tuple[str, int]]) -> dict[tuple[str, int], list[list[str]]]:
         from .tabix_util import bulk_tabix
@@ -176,6 +184,7 @@ class ClinVarAnnotator:
         dbsnp_bulk = self.dbsnp.bulk_rsids(positions) if self.dbsnp else {}
         gnomad_bulk = self.gnomad.bulk_frequencies(positions) if self.gnomad else {}
         onekg_bulk = self.onekg.bulk_frequencies(positions) if self.onekg else {}
+        revel_bulk = self.revel.bulk_scores(positions) if self.revel else {}
 
         results = []
         for q in queries:
@@ -184,10 +193,11 @@ class ClinVarAnnotator:
             dbsnp_rsid = _rsid_from_bulk(dbsnp_bulk, chrom, q.pos, q.ref, q.alt)
             gnomad_freqs = _freq_from_bulk(gnomad_bulk, chrom, q.pos, q.ref, q.alt)
             onekg_freqs = _freq_from_bulk(onekg_bulk, chrom, q.pos, q.ref, q.alt)
+            revel_score = _revel_from_bulk(revel_bulk, chrom, q.pos, q.ref, q.alt)
             gnomad_cov = bool(self.gnomad and self.gnomad.available and self.gnomad.covers(chrom))
             onekg_cov = bool(self.onekg and self.onekg.available and self.onekg.covers(chrom))
             results.append(
-                self._assemble(q, chrom, rows, gnomad_freqs, onekg_freqs, dbsnp_rsid, gnomad_cov, onekg_cov)
+                self._assemble(q, chrom, rows, gnomad_freqs, onekg_freqs, dbsnp_rsid, gnomad_cov, onekg_cov, revel_score)
             )
         return results
 
@@ -203,4 +213,11 @@ def _rsid_from_bulk(bulk, chrom, pos, ref, alt) -> str | None:
     for rec_ref, rec_alt, rsid in bulk.get((chrom, pos), []):
         if rec_ref == ref and alt in rec_alt.split(",") and rsid.startswith("rs"):
             return rsid
+    return None
+
+
+def _revel_from_bulk(bulk, chrom, pos, ref, alt) -> float | None:
+    for rec_ref, rec_alt, score in bulk.get((chrom, pos), []):
+        if rec_ref == ref and rec_alt == alt:
+            return score
     return None

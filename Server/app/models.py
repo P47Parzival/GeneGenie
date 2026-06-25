@@ -62,6 +62,8 @@ class Annotation(BaseModel):
     # gnomAD population allele frequencies (GRCh38). Differentiator: AF_sas.
     global_freq: float | None = Field(default=None, description="gnomAD overall allele frequency (AF)")
     south_asian_freq: float | None = Field(default=None, description="gnomAD South-Asian allele frequency (AF_sas)")
+    # In-silico missense predictor (REVEL 0-1; higher = more likely damaging).
+    revel_score: float | None = None
     # Indian population layer (Week 6): SAS-vs-global context across sources.
     population: PopulationContext | None = None
     # ACMG classification (Week 3 engine).
@@ -88,6 +90,7 @@ class HealthResponse(BaseModel):
     dbsnp_loaded: bool
     gnomad_loaded: bool
     onekg_loaded: bool
+    revel_loaded: bool
 
 
 # --- Portal dashboard stats -------------------------------------------------

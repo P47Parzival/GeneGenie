@@ -82,5 +82,11 @@ def build_registry(settings: Settings | None = None) -> dict[str, ReferenceDatas
             local_path=s.kg_path, s3_uri=f"{bucket}/knowledge/knowledge_graph.json",
             requires_index=False, contigs=None,
         ),
+        ReferenceDataset(
+            key="revel", label="REVEL", detail="missense predictor chr22 · PP3/BP4",
+            category="predictor", source="REVEL v1.3 (Zenodo 7072866)",
+            local_path=s.revel_path, s3_uri=f"{bucket}/revel/revel_chr22.tsv.gz",
+            contigs=frozenset({"22"}),
+        ),
     ]
     return {d.key: d for d in datasets}
