@@ -39,6 +39,30 @@ def _parse_info(info: str) -> dict[str, str]:
     return fields
 
 
+_ACMG_RANK = {
+    "Pathogenic": 500,
+    "Likely Pathogenic": 400,
+    "Uncertain Significance": 300,
+    "Likely Benign": 200,
+    "Benign": 100,
+}
+
+
+def _priority(result: Annotation) -> int:
+    """Triage sort key: ACMG band, then ClinVar evidence, rarity, enrichment."""
+    score = _ACMG_RANK.get(result.acmg_classification or "", 0)
+    if result.matched:
+        score += 50
+    if result.population and result.population.comparison == "population-enriched":
+        score += 20
+    sas = result.south_asian_freq
+    if sas is not None and sas < 0.01:
+        score += 10
+    elif sas is None:
+        score += 5
+    return score
+
+
 class ClinVarAnnotator:
     """Wraps a tabix-indexed ClinVar VCF for region-based annotation."""
 
@@ -120,6 +144,7 @@ class ClinVarAnnotator:
             result.significance,
             result.review_status,
         )
+        result.priority = _priority(result)
         return result
 
     def annotate(self, q: VariantQuery) -> Annotation:

@@ -70,6 +70,8 @@ class Annotation(BaseModel):
     )
     acmg_basis: str | None = Field(default=None, description="How the headline classification was derived")
     acmg_evidence: list[EvidenceItem] = Field(default_factory=list)
+    # Clinical-triage sort key (higher = more worth a human's attention).
+    priority: int = Field(default=0, description="Server-computed triage priority for the dashboard grid")
 
 
 class AnnotateResponse(BaseModel):

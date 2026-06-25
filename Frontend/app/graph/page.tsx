@@ -1,7 +1,7 @@
 'use client';
 
 import { Activity, AlertCircle, Dna, Loader2, Network, Pill, Search, Workflow } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import SectionHeader from '../components/SectionHeader';
 
 interface DiseaseAssociation {
@@ -34,9 +34,7 @@ export default function GraphPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function search(e: React.FormEvent) {
-    e.preventDefault();
-    const symbol = query.trim().toUpperCase();
+  async function runSearch(symbol: string) {
     if (!symbol) return;
     setLoading(true);
     setError(null);
@@ -52,6 +50,22 @@ export default function GraphPage() {
       setLoading(false);
     }
   }
+
+  function search(e: React.FormEvent) {
+    e.preventDefault();
+    runSearch(query.trim().toUpperCase());
+  }
+
+  // Honor ?gene=SYMBOL (e.g. deep-linked from the Interpret evidence panel).
+  useEffect(() => {
+    const param = new URLSearchParams(window.location.search).get('gene');
+    if (param) {
+      const symbol = param.trim().toUpperCase();
+      setQuery(symbol);
+      runSearch(symbol);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <main className="flex flex-col gap-8 pb-16">

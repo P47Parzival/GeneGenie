@@ -76,8 +76,10 @@ Manage it: `sudo systemctl restart genegenie` · `journalctl -u genegenie -f`
 - `GET  /references` — reference-data registry: every dataset's metadata + loaded flag
 - `GET  /gene/{symbol}` — knowledge-graph node: diseases, drugs, pathways, variant stats
 - `GET  /stats` — portal dashboard aggregates (annotations DB)
-- `POST /annotate/variant` — JSON `{chrom,pos,ref,alt}` -> annotation (incl. ACMG)
-- `POST /annotate` — multipart upload of a `.vcf` -> annotations (persisted)
+- `POST /annotate/variant` — JSON `{chrom,pos,ref,alt}` -> annotation (incl. ACMG + `priority`)
+- `POST /annotate` — multipart upload of a `.vcf` -> annotations (persisted); each carries a
+  `priority` triage score (ACMG band + ClinVar + rarity + SAS-enrichment) used by the
+  frontend `/interpret` clinical dashboard (triage grid + evidence panel + report basket)
 - `POST /pgx` — multipart `.vcf` -> pharmacogenomics report (diplotype/phenotype/drug)
 - `POST /prs` — multipart `.vcf` -> polygenic risk scores (percentile vs SAS reference)
 

@@ -9,6 +9,7 @@ const links = [
   { label: 'Platform', href: '/platform' },
   { label: 'Applications', href: '/applications' },
   { label: 'Annotate', href: '/annotate' },
+  { label: 'Interpret', href: '/interpret' },
   { label: 'PGx', href: '/pgx' },
   { label: 'Risk', href: '/risk' },
   { label: 'Graph', href: '/graph' },
