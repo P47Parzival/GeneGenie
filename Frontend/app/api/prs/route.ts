@@ -1,29 +1,7 @@
-import { NextResponse } from 'next/server';
+import { proxyUpload } from '../_proxyUpload';
 
-// Server-side proxy for polygenic-risk VCF uploads -> annotation backend.
-const API_BASE = process.env.ANNOTATION_API_BASE ?? 'http://3.6.214.176:8000';
+export const runtime = 'nodejs';
 
 export async function POST(request: Request) {
-  let form: FormData;
-  try {
-    form = await request.formData();
-  } catch {
-    return NextResponse.json({ detail: 'Expected multipart form upload' }, { status: 400 });
-  }
-
-  const file = form.get('file');
-  if (!file) {
-    return NextResponse.json({ detail: 'No file provided' }, { status: 400 });
-  }
-
-  try {
-    const upstream = await fetch(`${API_BASE}/prs`, { method: 'POST', body: form, cache: 'no-store' });
-    const data = await upstream.json();
-    return NextResponse.json(data, { status: upstream.status });
-  } catch {
-    return NextResponse.json(
-      { detail: 'Annotation service unreachable. Is the API up and port 8000 open?' },
-      { status: 502 },
-    );
-  }
+  return proxyUpload(request, '/prs');
 }

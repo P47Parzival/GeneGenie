@@ -57,7 +57,20 @@ GENES: dict[str, dict] = {
             {"name": "*5", "function": DECREASED, "variants": [("12", 21178615, "T", "C", "rs4149056")]},
         ],
     },
+    # CYP2D6 (chr22) — SNV-based subset only. Called via a dedicated path (the *10
+    # SNP rides on *4; gene deletions/duplications/hybrids are NOT detectable here).
+    "CYP2D6": {
+        "chrom": "22",
+        "alleles": [
+            {"name": "*4", "function": NO_FUNCTION, "variants": [("22", 42128945, "C", "T", "rs3892097")]},
+            {"name": "*10", "function": DECREASED, "variants": [("22", 42130692, "G", "A", "rs1065852")]},
+            {"name": "*41", "function": DECREASED, "variants": [("22", 42127803, "C", "T", "rs28371725")]},
+        ],
+    },
 }
+
+# CPIC activity values for CYP2D6 alleles (used to compute the activity score).
+CYP2D6_ACTIVITY = {"*1": 1.0, "*4": 0.0, "*10": 0.25, "*41": 0.5}
 
 
 # Phenotype -> drug guidance (CPIC). Keyed by gene then phenotype label.
@@ -93,5 +106,15 @@ DRUG_GUIDANCE: dict[str, dict[str, list[dict]]] = {
         "Decreased Function": [{"drug": "simvastatin", "recommendation":
             "Increased myopathy risk. Consider a lower dose or alternative statin."}],
         "Normal Function": [{"drug": "simvastatin", "recommendation": "Standard simvastatin dosing."}],
+    },
+    "CYP2D6": {
+        "Poor Metabolizer": [{"drug": "codeine / tramadol", "recommendation":
+            "Little/no conversion to the active metabolite — inadequate analgesia. Avoid; use a non-CYP2D6 opioid "
+            "(e.g. morphine). Also affects tamoxifen activation and many antidepressants/antipsychotics."}],
+        "Intermediate Metabolizer": [{"drug": "codeine / tramadol", "recommendation":
+            "Reduced activation; analgesia may be insufficient. Monitor response or consider an alternative."}],
+        "Normal Metabolizer": [{"drug": "codeine / tramadol", "recommendation": "Standard dosing."}],
+        "Ultrarapid Metabolizer": [{"drug": "codeine / tramadol", "recommendation":
+            "Increased conversion to active metabolite — risk of toxicity at standard doses. Avoid; use an alternative."}],
     },
 }

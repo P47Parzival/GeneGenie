@@ -194,7 +194,7 @@ function VcfUploadCard() {
           <input
             type="file"
             name="file"
-            accept=".vcf,text/plain"
+            accept=".vcf,.vcf.gz,.gz,.bgz,text/plain,application/gzip"
             className="hidden"
             onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
           />

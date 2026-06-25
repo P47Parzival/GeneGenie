@@ -52,3 +52,25 @@ class DbSnpLookup:
                 continue
             return rec_id if rec_id.startswith("rs") else None
         return None
+
+    def bulk_rsids(self, positions) -> dict[tuple[str, int], list[tuple[str, str, str]]]:
+        """One-pass lookup for many (bare_chrom, pos) -> [(ref, alt, rsid)]."""
+        from .tabix_util import bulk_tabix
+
+        if not self.available:
+            return {}
+        acc_to_bare: dict[str, str] = {}
+        regions = []
+        for chrom, pos in positions:
+            bare = chrom.replace("chr", "")
+            accession = GRCH38_REFSEQ.get(bare)
+            if accession:
+                acc_to_bare[accession] = bare
+                regions.append((accession, pos))
+        out: dict[tuple[str, int], list] = {}
+        for cols in bulk_tabix(self.vcf_path, self.tabix_bin, regions):
+            if len(cols) < 5:
+                continue
+            bare = acc_to_bare.get(cols[0], cols[0])
+            out.setdefault((bare, int(cols[1])), []).append((cols[3], cols[4], cols[2]))
+        return out

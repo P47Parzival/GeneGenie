@@ -30,10 +30,11 @@ from .models import (
     StatsResponse,
     VariantQuery,
 )
-from .pgx import run_pgx
-from .prs import run_prs
+from .pgx import defining_positions, defining_rsids, run_pgx
+from .prs import model_positions, model_rsids, run_prs
 from .registry import build_registry
-from .vcf_io import parse_vcf_genotypes, parse_vcf_text
+from .vcf_io import parse_vcf_genotypes_stream, parse_vcf_text_stream
+from fastapi.concurrency import run_in_threadpool
 
 settings = get_settings()
 registry = build_registry(settings)
@@ -104,28 +105,20 @@ def references() -> ReferencesResponse:
 
 @app.post("/pgx", response_model=PgxReport)
 async def pharmacogenomics(file: UploadFile = File(...)) -> PgxReport:
-    raw = await file.read()
-    try:
-        text = raw.decode("utf-8")
-    except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail="Upload must be an uncompressed text VCF")
-
-    genotypes, had_gt = parse_vcf_genotypes(text)
-    if not genotypes:
-        raise HTTPException(status_code=400, detail="No valid variant records found in VCF")
-    return run_pgx(genotypes, had_gt)
+    # Stream off the event loop; retain PGx-defining positions and rsIDs.
+    genotypes, rsid_index, had_gt = await run_in_threadpool(
+        parse_vcf_genotypes_stream, file.file, defining_positions(), defining_rsids()
+    )
+    return run_pgx(genotypes, rsid_index, had_gt)
 
 
 @app.post("/prs", response_model=PrsResponse)
 async def polygenic_risk(file: UploadFile = File(...)) -> PrsResponse:
-    raw = await file.read()
-    try:
-        text = raw.decode("utf-8")
-    except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail="Upload must be an uncompressed text VCF")
-
-    genotypes, _had_gt = parse_vcf_genotypes(text)
-    return run_prs(genotypes)
+    # Stream off the event loop; retain PRS model positions and rsIDs.
+    genotypes, rsid_index, _had_gt = await run_in_threadpool(
+        parse_vcf_genotypes_stream, file.file, model_positions(), model_rsids()
+    )
+    return run_prs(genotypes, rsid_index)
 
 
 @app.get("/stats", response_model=StatsResponse)
@@ -146,19 +139,15 @@ async def annotate_vcf(file: UploadFile = File(...)) -> AnnotateResponse:
     if not annotator.available:
         raise HTTPException(status_code=503, detail="ClinVar reference not loaded on server")
 
-    raw = await file.read()
-    try:
-        text = raw.decode("utf-8")
-    except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail="Upload must be an uncompressed text VCF")
-
-    variants = parse_vcf_text(text)
+    # Stream off the event loop; cap at max_variants (annotating a whole WGS VCF
+    # one ClinVar lookup at a time is not the intended use — see README).
+    variants, truncated = await run_in_threadpool(parse_vcf_text_stream, file.file)
     if not variants:
         raise HTTPException(status_code=400, detail="No valid variant records found in VCF")
 
-    annotations = annotator.annotate_many(variants)
+    annotations = await run_in_threadpool(annotator.annotate_many, variants)
 
     batch_id = uuid.uuid4().hex
     save_annotations(batch_id, annotations)
 
-    return AnnotateResponse(count=len(annotations), annotations=annotations)
+    return AnnotateResponse(count=len(annotations), annotations=annotations, truncated=truncated)

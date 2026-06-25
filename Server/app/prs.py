@@ -26,6 +26,20 @@ def _norm(chrom: str) -> str:
     return chrom.replace("chr", "")
 
 
+def model_positions() -> set[tuple[str, int]]:
+    """All (chrom, pos) sites used by any PRS model — for VCF prefiltering."""
+    positions: set[tuple[str, int]] = set()
+    for model in MODELS:
+        for v in model["variants"]:
+            positions.add((_norm(v["chrom"]), v["pos"]))
+    return positions
+
+
+def model_rsids() -> set[str]:
+    """All rsIDs used by any PRS model — rsID fallback survives build mismatch."""
+    return {v["rsid"] for model in MODELS for v in model["variants"] if v.get("rsid")}
+
+
 def _phi(z: float) -> float:
     """Standard normal CDF."""
     return 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
@@ -38,11 +52,16 @@ def build_pos_index(genotypes: dict[tuple[str, int, str, str], int]) -> PosIndex
     return index
 
 
-def _dosage(variant: dict, index: PosIndex) -> tuple[int, bool]:
-    """Effect-allele dosage (0..2) and whether the site was observed in the VCF."""
+def _dosage(variant: dict, index: PosIndex, rsid_index: dict[str, tuple[str, str, int]]) -> tuple[int, bool]:
+    """Effect-allele dosage (0..2) and whether the site was observed in the VCF.
+
+    Matches by position first, then by rsID (so a genome-build mismatch — different
+    coordinates, same rsID — still resolves)."""
     ea = variant["effect_allele"]
     ref = variant["ref"]
     rec = index.get((variant["chrom"], variant["pos"]))
+    if rec is None:
+        rec = rsid_index.get(variant.get("rsid", ""))
     if rec is None:
         # No record -> assume homozygous reference.
         return (2 if ea == ref else 0, False)
@@ -65,11 +84,11 @@ def _risk_band(percentile: float) -> str:
     return "Below average"
 
 
-def _score_model(model: dict, index: PosIndex) -> PrsTraitResult:
+def _score_model(model: dict, index: PosIndex, rsid_index: dict[str, tuple[str, str, int]]) -> PrsTraitResult:
     raw = mu = var = 0.0
     observed = 0
     for v in model["variants"]:
-        dose, was_observed = _dosage(v, index)
+        dose, was_observed = _dosage(v, index, rsid_index)
         w = v["weight"]
         p = v["sas_eaf"]
         raw += dose * w
@@ -97,9 +116,13 @@ def _score_model(model: dict, index: PosIndex) -> PrsTraitResult:
     )
 
 
-def run_prs(genotypes: dict[tuple[str, int, str, str], int]) -> PrsResponse:
+def run_prs(
+    genotypes: dict[tuple[str, int, str, str], int],
+    rsid_index: dict[str, tuple[str, str, int]] | None = None,
+) -> PrsResponse:
     index = build_pos_index(genotypes)
-    results = [_score_model(m, index) for m in MODELS]
+    rsid_index = rsid_index or {}
+    results = [_score_model(m, index, rsid_index) for m in MODELS]
     note = (
         "Illustrative polygenic scores for education, not clinical use. Percentiles are "
         "computed against a South-Asian reference distribution derived analytically from "

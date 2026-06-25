@@ -73,3 +73,20 @@ class OneKGenomesSAS:
             info = _parse_info(info_str)
             return (_to_float(info.get("AF")), _to_float(info.get("SAS_AF")))
         return (None, None)
+
+    def bulk_frequencies(self, positions) -> dict[tuple[str, int], list[tuple[str, str, float | None, float | None]]]:
+        """One-pass lookup for many (bare_chrom, pos) -> [(ref, alt, AF, SAS_AF)]."""
+        from .tabix_util import bulk_tabix
+
+        if not self.available:
+            return {}
+        regions = [(_norm_chrom(c), p) for (c, p) in positions if self.covers(c)]
+        out: dict[tuple[str, int], list] = {}
+        for cols in bulk_tabix(self.vcf_path, self.tabix_bin, regions):
+            if len(cols) < 8:
+                continue
+            info = _parse_info(cols[7])
+            out.setdefault((cols[0].replace("chr", ""), int(cols[1])), []).append(
+                (cols[3], cols[4], _to_float(info.get("AF")), _to_float(info.get("SAS_AF")))
+            )
+        return out

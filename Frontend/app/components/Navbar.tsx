@@ -25,7 +25,6 @@ export default function Navbar() {
         </div>
         <div>
           <p className="text-lg font-semibold tracking-normal text-white">GeneGenie</p>
-          <p className="text-xs uppercase tracking-[0.18em] text-cyan-200/70">AI gene-editing infrastructure</p>
         </div>
       </Link>
 
@@ -36,9 +35,8 @@ export default function Navbar() {
             <Link
               key={link.href}
               href={link.href}
-              className={`rounded-md px-3 py-2 transition ${
-                isActive ? 'bg-zinc-800 text-cyan-200' : 'hover:bg-zinc-800 hover:text-cyan-200'
-              }`}
+              className={`rounded-md px-3 py-2 transition ${isActive ? 'bg-zinc-800 text-cyan-200' : 'hover:bg-zinc-800 hover:text-cyan-200'
+                }`}
             >
               {link.label}
             </Link>

@@ -89,7 +89,7 @@ export default function RiskPage() {
           <label className="flex flex-1 cursor-pointer items-center justify-center gap-3 rounded-lg border border-dashed border-zinc-700 bg-zinc-950/50 px-4 py-6 text-center transition hover:border-cyan-400/50">
             <FileUp className="h-5 w-5 text-cyan-300" />
             <span className="text-sm text-zinc-300">{fileName ?? 'Select a VCF file'}</span>
-            <input type="file" name="file" accept=".vcf,text/plain" className="hidden" onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)} />
+            <input type="file" name="file" accept=".vcf,.vcf.gz,.gz,.bgz,text/plain,application/gzip" className="hidden" onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)} />
           </label>
           <button
             type="submit"
@@ -123,6 +123,8 @@ export default function RiskPage() {
 }
 
 function TraitCard({ result }: { result: PrsTraitResult }) {
+  const noCoverage = result.variants_observed === 0;
+  const lowCoverage = !noCoverage && result.variants_observed < result.variants_total / 2;
   return (
     <article className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-6 backdrop-blur-md">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -134,6 +136,25 @@ function TraitCard({ result }: { result: PrsTraitResult }) {
           {result.risk_band}
         </span>
       </div>
+
+      {noCoverage ? (
+        <div className="mt-4 flex items-start gap-2 rounded-md border border-red-400/40 bg-red-400/15 p-3 text-sm text-red-100">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            None of this model&apos;s {result.variants_total} variants were found in your VCF. This usually means a
+            genome-build mismatch (the model uses GRCh38) or the file doesn&apos;t include these SNPs. The score below is
+            just the population baseline — <strong>not meaningful for this sample</strong>.
+          </span>
+        </div>
+      ) : lowCoverage ? (
+        <div className="mt-4 flex items-start gap-2 rounded-md border border-amber-400/40 bg-amber-400/15 p-3 text-sm text-amber-100">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            Only {result.variants_observed} of {result.variants_total} model variants were found — limited coverage,
+            interpret with caution.
+          </span>
+        </div>
+      ) : null}
 
       <div className="mt-5">
         <div className="flex items-end justify-between">

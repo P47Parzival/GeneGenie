@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, FileUp, Loader2, Pill } from 'lucide-react';
+import { AlertCircle, AlertTriangle, FileUp, Loader2, Pill } from 'lucide-react';
 import { useState } from 'react';
 import SectionHeader from '../components/SectionHeader';
 
@@ -22,6 +22,8 @@ interface PgxReport {
   genes_tested: string[];
   results: PgxGeneResult[];
   note: string;
+  sites_observed: number;
+  sites_total: number;
 }
 
 function phenotypeTone(phenotype: string): string {
@@ -88,7 +90,7 @@ export default function PgxPage() {
             <input
               type="file"
               name="file"
-              accept=".vcf,text/plain"
+              accept=".vcf,.vcf.gz,.gz,.bgz,text/plain,application/gzip"
               className="hidden"
               onChange={(e) => setFileName(e.target.files?.[0]?.name ?? null)}
             />
@@ -112,6 +114,20 @@ export default function PgxPage() {
 
       {report ? (
         <>
+          {report.sites_observed === 0 ? (
+            <div className="flex items-start gap-2 rounded-md border border-red-400/40 bg-red-400/15 p-3 text-sm text-red-100">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                None of the {report.sites_total} PGx defining variants were found in your VCF — likely a genome-build
+                mismatch (this engine uses GRCh38) or the file doesn&apos;t cover these sites. All genes defaulted to
+                *1/*1, which is <strong>not an informative result</strong>.
+              </span>
+            </div>
+          ) : (
+            <p className="text-sm text-zinc-500">
+              {report.sites_observed} of {report.sites_total} PGx defining sites found in this VCF.
+            </p>
+          )}
           <section className="grid gap-4 md:grid-cols-2">
             {report.results.map((r) => (
               <GeneCard key={r.gene} result={r} />

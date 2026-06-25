@@ -75,6 +75,7 @@ class Annotation(BaseModel):
 class AnnotateResponse(BaseModel):
     count: int
     annotations: list[Annotation]
+    truncated: bool = Field(default=False, description="True if the VCF exceeded the per-request variant cap")
 
 
 class HealthResponse(BaseModel):
@@ -154,6 +155,8 @@ class PgxReport(BaseModel):
     genes_tested: list[str]
     results: list[PgxGeneResult]
     note: str
+    sites_observed: int = Field(default=0, description="How many PGx defining sites were found in the VCF")
+    sites_total: int = Field(default=0, description="Total PGx defining sites checked")
 
 
 # --- Gene knowledge graph (Week 4) ------------------------------------------

@@ -113,8 +113,12 @@ honest outcome. TODO: PP3/BP4 (REVEL/CADD/AlphaMissense), PVS1, PS1/PM5.
 `POST /pgx` takes a VCF and returns per-gene star-allele diplotypes, CPIC
 metabolizer phenotypes, and drug guidance for a curated subset: **CYP2C19**
 (clopidogrel), **TPMT** (thiopurines), **DPYD** (fluoropyrimidines), **SLCO1B1**
-(statins). GRCh38 coordinates + forward-strand REF/ALT were verified via the
-Ensembl REST API. Honest simplifications: unphased genotypes, reference (*1)
+(statins), and **CYP2D6** (codeine/tramadol, on chr22). GRCh38 coordinates +
+forward-strand REF/ALT were verified via the Ensembl REST API. CYP2D6 uses CPIC
+activity scores and handles the *10-on-*4 SNP linkage, but is **SNV-based only**:
+gene deletions (*5), duplications, and hybrid alleles are NOT detected, so its
+result is approximate. Matching is by position then rsID, and the report includes
+`sites_observed / sites_total` so zero-coverage (e.g. a build mismatch) is visible. Honest simplifications: unphased genotypes, reference (*1)
 assumed where a defining variant is absent, no CNV/structural alleles. Zygosity
 is read from the VCF `GT` field (homozygous → 2 copies). Deferred: CYP2D6 (CNV),
 warfarin (CYP2C9+VKORC1 algorithm).
@@ -164,6 +168,23 @@ coverage). Lookup classes take a dataset and derive `available()` / `covers()`
 from it — no per-class path or contig logic. `GET /references` exposes the
 registry (consumed dynamically by the `/portal` page), and adding a dataset is a
 single entry here plus its lookup/fetch script.
+
+## Uploading large VCFs
+
+VCF uploads (`/annotate`, `/pgx`, `/prs`) **stream** through the Next.js proxy and
+are parsed line-by-line on the backend (gzip/bgzip auto-detected) — the whole file
+is never buffered in memory. For `/pgx` and `/prs` the parser keeps only the
+handful of positions the model needs, so a multi-GB whole-genome VCF is processed
+in seconds at low, constant memory.
+
+Recommendations:
+- **Upload `.vcf.gz`** (bgzipped). It is ~5–10× smaller, so the upload finishes
+  well within the proxy's request timeout. A plain 1.2 GB VCF can exceed it purely
+  from upload time.
+- `/annotate` caps at 10,000 variants per request (`truncated: true` when hit).
+  It uses a **bulk path** — one `tabix -R` pass per reference (ClinVar/dbSNP/gnomAD/
+  1000G) instead of per-variant — so ~8,000 chr22 variants annotate in ~15 s.
+  PGx/PRS have no cap (they prefilter to known sites).
 
 ## Network access
 
