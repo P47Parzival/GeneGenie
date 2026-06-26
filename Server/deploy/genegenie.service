@@ -9,9 +9,12 @@ WorkingDirectory=/home/ubuntu/genegenie
 Environment=CLINVAR_VCF=/home/ubuntu/data/clinvar.vcf.gz
 Environment=DBSNP_VCF=/home/ubuntu/data/dbsnp_chr22.vcf.gz
 Environment=GNOMAD_VCF=/home/ubuntu/data/gnomad_exomes_chr22.vcf.bgz
+Environment=GNOMAD_VCF_GENOME=/home/ubuntu/data/gnomad_exomes_genome.vcf.bgz
 Environment=ONEKG_VCF=/home/ubuntu/data/onekg_sas_chr22.vcf.gz
+Environment=ONEKG_VCF_GENOME=/home/ubuntu/data/onekg_sas_genome.vcf.gz
 Environment=KG_PATH=/home/ubuntu/data/knowledge_graph.json
 Environment=REVEL_PATH=/home/ubuntu/data/revel_chr22.tsv.gz
+Environment=REVEL_PATH_GENOME=/home/ubuntu/data/revel_genome.tsv.gz
 Environment=DATABASE_URL=sqlite:////home/ubuntu/data/annotations.db
 Environment=S3_BUCKET=indian-genomics-data
 Environment=AWS_REGION=ap-south-1

@@ -22,17 +22,22 @@ class Settings(BaseSettings):
     # Optional dbSNP subset (e.g. chr22) for rsID lookups.
     dbsnp_vcf: Path | None = Path("data/dbsnp_chr22.vcf.gz")
 
-    # Optional gnomAD subset (e.g. exomes chr22) for population allele frequencies.
+    # gnomAD frequencies. The registry prefers the genome-wide file if present,
+    # otherwise falls back to the chr22 subset (so each dataset upgrades itself
+    # to genome-wide on the next restart once its prepared file lands).
     gnomad_vcf: Path | None = Path("data/gnomad_exomes_chr22.vcf.bgz")
+    gnomad_vcf_genome: Path | None = Path("data/gnomad_exomes_genome.vcf.bgz")
 
-    # Optional 1000 Genomes SAS subset (chr22) for South-Asian allele frequencies.
+    # 1000 Genomes SAS frequencies (chr22 subset, or genome-wide if present).
     onekg_vcf: Path | None = Path("data/onekg_sas_chr22.vcf.gz")
+    onekg_vcf_genome: Path | None = Path("data/onekg_sas_genome.vcf.gz")
 
     # Optional gene knowledge-graph index (built by app.build_kg).
     kg_path: Path | None = Path("data/knowledge_graph.json")
 
-    # Optional REVEL missense predictor subset (chr22) for ACMG PP3/BP4.
+    # REVEL missense predictor (chr22 subset, or genome-wide if present).
     revel_path: Path | None = Path("data/revel_chr22.tsv.gz")
+    revel_path_genome: Path | None = Path("data/revel_genome.tsv.gz")
 
     # --- AWS / S3 ------------------------------------------------------------
     s3_bucket: str = "indian-genomics-data"

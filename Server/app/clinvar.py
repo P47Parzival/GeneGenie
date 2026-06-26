@@ -146,7 +146,7 @@ class ClinVarAnnotator:
         result.acmg_classification, result.acmg_basis, result.acmg_evidence = acmg.classify(
             result.global_freq,
             result.south_asian_freq,
-            gnomad_covered or onekg_covered,
+            gnomad_covered,  # PM2-by-absence needs the large cohort (gnomAD), not 1000G
             result.significance,
             result.review_status,
             revel_score,

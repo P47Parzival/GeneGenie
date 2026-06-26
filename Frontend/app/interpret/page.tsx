@@ -180,6 +180,7 @@ export default function InterpretPage() {
             </button>
           </div>
         </div>
+        <p className="mt-2 text-xs text-zinc-600">Large genome? Upload the bgzipped <span className="font-mono">.vcf.gz</span> — it&apos;s ~10× smaller and uploads much faster (a multi-GB plain .vcf can take minutes and time out).</p>
         {error ? <p className="mt-3 text-sm text-red-300">{error}</p> : null}
         {truncated ? (
           <p className="mt-3 flex items-center gap-2 rounded-md border border-amber-400/30 bg-amber-400/10 p-2 text-xs text-amber-100">
@@ -459,8 +460,8 @@ function EvidencePanel(p: {
                   </div>
                 </div>
               ) : null}
-              <a href={`/graph?gene=${encodeURIComponent(a.gene)}`} target="_blank" rel="noreferrer" className="inline-block text-xs text-cyan-300 hover:underline">
-                Open full knowledge graph →
+              <a href={`/gene/${encodeURIComponent(a.gene)}`} target="_blank" rel="noreferrer" className="inline-block text-xs text-cyan-300 hover:underline">
+                Open {a.gene} gene summary →
               </a>
             </div>
           )}

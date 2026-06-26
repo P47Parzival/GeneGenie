@@ -186,11 +186,12 @@ function VcfUploadCard() {
 
   return (
     <article className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-5 backdrop-blur-md">
-      <SectionHeader icon={FileUp} eyebrow="Batch" title="VCF upload" description="Uncompressed .vcf, GRCh38." />
+      <SectionHeader icon={FileUp} eyebrow="Batch" title="VCF upload" description="GRCh38 .vcf or .vcf.gz." />
       <form onSubmit={upload} className="mt-5 flex flex-col gap-3">
         <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-zinc-700 bg-zinc-950/50 px-4 py-8 text-center transition hover:border-cyan-400/50">
           <FileUp className="h-6 w-6 text-cyan-300" />
           <span className="mt-3 text-sm text-zinc-300">{fileName ?? 'Click to select a VCF file'}</span>
+          <span className="mt-1 text-xs text-zinc-600">Large genome? Upload the bgzipped <span className="font-mono">.vcf.gz</span> — uploads much faster.</span>
           <input
             type="file"
             name="file"

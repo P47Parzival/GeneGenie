@@ -1,6 +1,7 @@
 'use client';
 
-import { Activity, AlertCircle, Dna, Loader2, Network, Pill, Search, Workflow } from 'lucide-react';
+import { Activity, AlertCircle, ArrowRight, Dna, Loader2, Network, Pill, Search, Workflow } from 'lucide-react';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import SectionHeader from '../components/SectionHeader';
 
@@ -121,6 +122,12 @@ function GeneGraph({ gene }: { gene: GeneNode }) {
               <h2 className="text-2xl font-semibold text-white">{gene.symbol}</h2>
               <p className="text-xs text-zinc-500">{gene.ncbi_id ? `NCBI Gene ${gene.ncbi_id}` : 'gene node'}</p>
             </div>
+            <Link
+              href={`/gene/${encodeURIComponent(gene.symbol)}`}
+              className="ml-2 inline-flex items-center gap-2 rounded-md bg-cyan-300 px-4 py-2 text-sm font-semibold text-zinc-950 transition hover:bg-cyan-200"
+            >
+              Gene summary <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
             <Stat label="Pathogenic" value={s.pathogenic} tone="border-red-400/40 bg-red-400/15 text-red-200" />

@@ -48,9 +48,22 @@ class ReferenceDataset:
         return self.contigs is None
 
 
+def _pick(genome_path: Path | None, chr22_path: Path | None) -> tuple[Path | None, frozenset[str] | None, str]:
+    """Prefer a genome-wide file if it exists, else the chr22 subset.
+    Returns (path, contigs, scope-label). contigs=None means genome-wide."""
+    if genome_path and genome_path.exists():
+        return genome_path, None, "genome-wide"
+    return chr22_path, frozenset({"22"}), "chr22"
+
+
 def build_registry(settings: Settings | None = None) -> dict[str, ReferenceDataset]:
     s = settings or get_settings()
     bucket = f"s3://{s.s3_bucket}"
+
+    gnomad_path, gnomad_contigs, gnomad_scope = _pick(s.gnomad_vcf_genome, s.gnomad_vcf)
+    onekg_path, onekg_contigs, onekg_scope = _pick(s.onekg_vcf_genome, s.onekg_vcf)
+    revel_path, revel_contigs, revel_scope = _pick(s.revel_path_genome, s.revel_path)
+
     datasets = [
         ReferenceDataset(
             key="clinvar", label="ClinVar", detail="GRCh38 · full",
@@ -65,16 +78,16 @@ def build_registry(settings: Settings | None = None) -> dict[str, ReferenceDatas
             contigs=frozenset({"22"}),
         ),
         ReferenceDataset(
-            key="gnomad", label="gnomAD", detail="exomes chr22 · AF_sas",
+            key="gnomad", label="gnomAD", detail=f"exomes {gnomad_scope} · AF_sas",
             category="population", source="gnomAD v4.1 exomes",
-            local_path=s.gnomad_vcf, s3_uri=f"{bucket}/gnomad/gnomad_exomes_chr22.vcf.bgz",
-            contigs=frozenset({"22"}),
+            local_path=gnomad_path, s3_uri=f"{bucket}/gnomad/",
+            contigs=gnomad_contigs,
         ),
         ReferenceDataset(
-            key="onekg", label="1000G", detail="SAS chr22 · SAS_AF",
+            key="onekg", label="1000G", detail=f"SAS {onekg_scope} · SAS_AF",
             category="population", source="1000 Genomes (GRCh38)",
-            local_path=s.onekg_vcf, s3_uri=f"{bucket}/onekg/onekg_sas_chr22.vcf.gz",
-            contigs=frozenset({"22"}),
+            local_path=onekg_path, s3_uri=f"{bucket}/onekg/",
+            contigs=onekg_contigs,
         ),
         ReferenceDataset(
             key="knowledge", label="Knowledge Graph", detail="gene → disease/drug/pathway",
@@ -83,10 +96,10 @@ def build_registry(settings: Settings | None = None) -> dict[str, ReferenceDatas
             requires_index=False, contigs=None,
         ),
         ReferenceDataset(
-            key="revel", label="REVEL", detail="missense predictor chr22 · PP3/BP4",
+            key="revel", label="REVEL", detail=f"missense {revel_scope} · PP3/BP4",
             category="predictor", source="REVEL v1.3 (Zenodo 7072866)",
-            local_path=s.revel_path, s3_uri=f"{bucket}/revel/revel_chr22.tsv.gz",
-            contigs=frozenset({"22"}),
+            local_path=revel_path, s3_uri=f"{bucket}/revel/",
+            contigs=revel_contigs,
         ),
     ]
     return {d.key: d for d in datasets}

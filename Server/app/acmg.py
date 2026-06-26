@@ -89,33 +89,34 @@ def review_to_stars(review_status: str | None) -> int:
     return 0
 
 
-def _population_evidence(global_freq, sas_freq, covered: bool) -> list[EvidenceItem]:
-    if not covered:
-        return []  # we cannot speak to frequency outside the loaded subsets
-    # Common in ANY queried population leans benign; track which population drives it.
+def _population_evidence(global_freq, sas_freq, rarity_assessable: bool) -> list[EvidenceItem]:
+    """Population-frequency criteria.
+
+    `rarity_assessable` = whether a *large* cohort (gnomAD) covers this position.
+    A reported frequency (from any source) is reliable for BA1/BS1, and a reported
+    very-low frequency is reliable for PM2. But "absent from databases" only
+    justifies PM2 when a large cohort actually looked — 'absent from 1000G' (a few
+    thousand people) does not, by itself, mean rare.
+    """
     candidates = [(f, lbl) for f, lbl in ((global_freq, "global"), (sas_freq, "South Asian")) if f is not None]
-    if not candidates:
-        return [
-            EvidenceItem(
-                code="PM2_Supporting",
-                category="pathogenic",
-                strength=SUPPORTING,
-                description="Absent from population references (loaded subset)",
-                source="population",
-            )
-        ]
-    af, which = max(candidates, key=lambda x: x[0])
-    pop = f" ({which})" if which == "South Asian" else ""
-    if af >= BA1_AF:
-        return [EvidenceItem(code="BA1", category="benign", strength=STAND_ALONE,
-                             description=f"Allele frequency {af:.3%}{pop} ≥ 5%", source="population")]
-    if af >= BS1_AF:
-        return [EvidenceItem(code="BS1", category="benign", strength=STRONG,
-                             description=f"Allele frequency {af:.3%}{pop} ≥ 1%", source="population")]
-    if af < PM2_AF:
+    if candidates:
+        af, which = max(candidates, key=lambda x: x[0])
+        pop = f" ({which})" if which == "South Asian" else ""
+        if af >= BA1_AF:
+            return [EvidenceItem(code="BA1", category="benign", strength=STAND_ALONE,
+                                 description=f"Allele frequency {af:.3%}{pop} ≥ 5%", source="population")]
+        if af >= BS1_AF:
+            return [EvidenceItem(code="BS1", category="benign", strength=STRONG,
+                                 description=f"Allele frequency {af:.3%}{pop} ≥ 1%", source="population")]
+        if af < PM2_AF:
+            return [EvidenceItem(code="PM2_Supporting", category="pathogenic", strength=SUPPORTING,
+                                 description=f"Allele frequency {af:.4%} < 0.01% in population references", source="population")]
+        return []  # 0.01%–1%: no population criterion applies
+    # No frequency from any source: only a large cohort's silence justifies PM2.
+    if rarity_assessable:
         return [EvidenceItem(code="PM2_Supporting", category="pathogenic", strength=SUPPORTING,
-                             description=f"Allele frequency {af:.4%} < 0.01% in population references", source="population")]
-    return []  # 0.01%–1%: no population criterion applies
+                             description="Absent from gnomAD", source="gnomAD")]
+    return []
 
 
 def _clinvar_evidence(significance: str | None, stars: int) -> list[EvidenceItem]:
@@ -194,14 +195,18 @@ def _clinvar_to_tier(significance: str | None) -> str | None:
 def classify(
     global_freq,
     sas_freq,
-    covered: bool,
+    rarity_assessable: bool,
     significance: str | None,
     review_status: str | None,
     revel_score: float | None = None,
 ) -> tuple[str, str, list[EvidenceItem]]:
-    """Return (classification, basis, evidence)."""
+    """Return (classification, basis, evidence).
+
+    `rarity_assessable` should reflect coverage by a LARGE cohort (gnomAD), used to
+    decide whether absence from databases supports PM2.
+    """
     stars = review_to_stars(review_status)
-    evidence = _population_evidence(global_freq, sas_freq, covered)
+    evidence = _population_evidence(global_freq, sas_freq, rarity_assessable)
     evidence += _clinvar_evidence(significance, stars)
     evidence += _predictor_evidence(revel_score)
 
