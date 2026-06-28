@@ -48,10 +48,17 @@ knowledge = KnowledgeGraph(settings.kg_path)
 
 app = FastAPI(title=settings.app_name, version=settings.app_version)
 
-# Allow the Next.js frontend (dev + deployed) to call the API.
+# Allow the Next.js frontend (local dev + the deployed site) to call the API
+# directly from the browser. Vercel preview deployments use *.vercel.app.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://genegenie.tech",
+        "https://www.genegenie.tech",
+    ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

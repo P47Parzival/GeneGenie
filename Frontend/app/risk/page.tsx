@@ -2,6 +2,7 @@
 
 import { Activity, AlertCircle, AlertTriangle, FileUp, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { apiUrl } from '../lib/api';
 
 interface PrsTraitResult {
   trait: string;
@@ -56,7 +57,7 @@ export default function RiskPage() {
     try {
       const body = new FormData();
       body.append('file', input.files[0]);
-      const res = await fetch('/api/prs', { method: 'POST', body });
+      const res = await fetch(apiUrl('/prs'), { method: 'POST', body });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail ?? 'PRS analysis failed');
       setReport(data as PrsResponse);

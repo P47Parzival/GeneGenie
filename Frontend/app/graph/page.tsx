@@ -4,6 +4,7 @@ import { Activity, AlertCircle, ArrowRight, Dna, Loader2, Network, Pill, Search,
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import SectionHeader from '../components/SectionHeader';
+import { apiUrl } from '../lib/api';
 
 interface DiseaseAssociation {
   name: string;
@@ -41,7 +42,7 @@ export default function GraphPage() {
     setError(null);
     setGene(null);
     try {
-      const res = await fetch(`/api/gene/${encodeURIComponent(symbol)}`);
+      const res = await fetch(apiUrl(`/gene/${encodeURIComponent(symbol)}`));
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail ?? 'Lookup failed');
       setGene(data as GeneNode);

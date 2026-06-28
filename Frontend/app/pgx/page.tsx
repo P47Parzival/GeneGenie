@@ -3,6 +3,7 @@
 import { AlertCircle, AlertTriangle, FileUp, Loader2, Pill } from 'lucide-react';
 import { useState } from 'react';
 import SectionHeader from '../components/SectionHeader';
+import { apiUrl } from '../lib/api';
 
 interface PgxDrugGuidance {
   drug: string;
@@ -58,7 +59,7 @@ export default function PgxPage() {
     try {
       const body = new FormData();
       body.append('file', input.files[0]);
-      const res = await fetch('/api/pgx', { method: 'POST', body });
+      const res = await fetch(apiUrl('/pgx'), { method: 'POST', body });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail ?? 'PGx analysis failed');
       setReport(data as PgxReport);

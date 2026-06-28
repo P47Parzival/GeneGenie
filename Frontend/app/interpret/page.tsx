@@ -2,6 +2,7 @@
 
 import { AlertTriangle, FileUp, FlaskConical, Loader2, Star, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { apiUrl } from '../lib/api';
 
 // ---------- types ----------
 interface EvidenceItem { code: string; category: string; strength: string; description: string; source: string }
@@ -101,7 +102,7 @@ export default function InterpretPage() {
     try {
       const body = new FormData();
       body.append('file', input.files[0]);
-      const res = await fetch('/api/annotate', { method: 'POST', body });
+      const res = await fetch(apiUrl('/annotate'), { method: 'POST', body });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail ?? 'Annotation failed');
       setAnnotations(data.annotations as Annotation[]);
@@ -355,7 +356,7 @@ function EvidencePanel(p: {
     if (geneCache.has(a.gene)) { setGene(geneCache.get(a.gene) ?? null); return; }
     let active = true;
     setGene(undefined);
-    fetch(`/api/gene/${encodeURIComponent(a.gene)}`)
+    fetch(apiUrl(`/gene/${encodeURIComponent(a.gene)}`))
       .then((r) => (r.ok ? r.json() : null))
       .then((node: GeneNode | null) => { if (active) { geneCache.set(a.gene!, node); setGene(node); } })
       .catch(() => { if (active) setGene(null); });

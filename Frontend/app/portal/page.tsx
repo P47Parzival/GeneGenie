@@ -3,6 +3,7 @@
 import { Activity, AlertCircle, Binary, Database, FlaskConical, LayoutGrid, Loader2, ShieldCheck } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import SectionHeader from '../components/SectionHeader';
+import { apiUrl } from '../lib/api';
 
 interface ReferenceDatasetInfo {
   key: string;
@@ -55,11 +56,11 @@ export default function PortalPage() {
   useEffect(() => {
     let isMounted = true;
     Promise.all([
-      fetch('/api/stats', { cache: 'no-store' }).then((r) => {
+      fetch(apiUrl('/stats'), { cache: 'no-store' }).then((r) => {
         if (!r.ok) throw new Error('stats request failed');
         return r.json();
       }),
-      fetch('/api/references', { cache: 'no-store' })
+      fetch(apiUrl('/references'), { cache: 'no-store' })
         .then((r) => (r.ok ? r.json() : { datasets: [] }))
         .catch(() => ({ datasets: [] })),
     ])

@@ -3,6 +3,7 @@
 import { AlertCircle, Dna, FileUp, Loader2, Search, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 import SectionHeader from '../components/SectionHeader';
+import { apiUrl } from '../lib/api';
 
 interface Annotation {
   chrom: string;
@@ -115,7 +116,7 @@ function SingleVariantCard() {
     setError(null);
     setResult(null);
     try {
-      const res = await fetch('/api/annotate/variant', {
+      const res = await fetch(apiUrl('/annotate/variant'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ chrom, pos: Number(pos), ref, alt }),
@@ -173,7 +174,7 @@ function VcfUploadCard() {
     try {
       const body = new FormData();
       body.append('file', input.files[0]);
-      const res = await fetch('/api/annotate', { method: 'POST', body });
+      const res = await fetch(apiUrl('/annotate'), { method: 'POST', body });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail ?? 'Upload failed');
       setResults(data.annotations as Annotation[]);
